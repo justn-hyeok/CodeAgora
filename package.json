@@ -1,0 +1,44 @@
+{
+  "name": "oh-my-codereview",
+  "version": "0.1.0",
+  "description": "Multi-LLM collaborative code review pipeline",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "oh-my-codereview": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/cli/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "ci": "pnpm typecheck && pnpm test && pnpm build",
+    "review": "tsx src/cli/index.ts review"
+  },
+  "keywords": [
+    "code-review",
+    "llm",
+    "multi-agent",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.28.0",
+  "dependencies": {
+    "@octokit/rest": "^22.0.1",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "minimatch": "^10.2.0",
+    "node-fetch": "^3.3.2",
+    "typescript": "^5.9.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "vitest": "^4.0.18"
+  }
+}

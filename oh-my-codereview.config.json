@@ -1,0 +1,65 @@
+{
+  "head_agent": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4",
+    "fallback_model": "claude-sonnet-3-5"
+  },
+  "supporters": {
+    "codex": {
+      "provider": "openai",
+      "model": "gpt-4",
+      "enabled": false
+    },
+    "gemini": {
+      "provider": "google",
+      "model": "gemini-2.0-flash-exp",
+      "enabled": false
+    }
+  },
+  "discord": {
+    "enabled": false
+  },
+  "reviewers": [
+    {
+      "name": "deepseek",
+      "provider": "deepseek",
+      "model": "deepseek-chat",
+      "enabled": true,
+      "timeout": 300
+    },
+    {
+      "name": "qwen",
+      "provider": "alibaba",
+      "model": "qwen-max",
+      "enabled": true,
+      "timeout": 300
+    },
+    {
+      "name": "gemini-flash",
+      "provider": "google",
+      "model": "gemini-2.0-flash-exp",
+      "enabled": true,
+      "timeout": 300
+    },
+    {
+      "name": "claude-haiku",
+      "provider": "anthropic",
+      "model": "claude-haiku-3-5",
+      "enabled": false,
+      "timeout": 300
+    },
+    {
+      "name": "gpt-4o-mini",
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "enabled": false,
+      "timeout": 300
+    }
+  ],
+  "settings": {
+    "min_reviewers": 3,
+    "max_parallel": 5,
+    "output_format": "markdown",
+    "default_timeout": 300
+  }
+}

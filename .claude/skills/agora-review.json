@@ -1,0 +1,56 @@
+{
+  "name": "agora-review",
+  "version": "1.0.0",
+  "description": "Multi-agent code review with debate-driven consensus",
+  "prefix": "agora",
+  "commands": [
+    {
+      "name": "review",
+      "description": "Run multi-agent code review on git diff",
+      "args": {
+        "file": {
+          "type": "string",
+          "description": "Review specific file only"
+        },
+        "staged": {
+          "type": "boolean",
+          "description": "Review staged changes only"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Compare against branch",
+          "default": "main"
+        }
+      }
+    },
+    {
+      "name": "config",
+      "description": "View or update configuration",
+      "args": {
+        "add-reviewer": {
+          "type": "boolean",
+          "description": "Add a new reviewer"
+        },
+        "set": {
+          "type": "string",
+          "description": "Set config value (key=value)"
+        }
+      }
+    },
+    {
+      "name": "status",
+      "description": "Check provider status and API keys"
+    }
+  ],
+  "requires": {
+    "env": [
+      "ANTHROPIC_API_KEY",
+      "OPENAI_API_KEY",
+      "GOOGLE_API_KEY"
+    ]
+  },
+  "config": {
+    "file": "codeagora.config.json",
+    "schema": "./src/config/schema.ts"
+  }
+}

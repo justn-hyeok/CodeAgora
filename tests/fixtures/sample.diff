@@ -1,0 +1,14 @@
+diff --git a/src/auth.ts b/src/auth.ts
+index 1234567..abcdefg 100644
+--- a/src/auth.ts
++++ b/src/auth.ts
+@@ -10,7 +10,8 @@ export function authenticateUser(username: string, password: string) {
+   const user = db.query(`SELECT * FROM users WHERE username = '${username}'`);
+
+   if (user && user.password === password) {
+-    return { success: true };
++    const token = generateToken(user);
++    return { success: true, token };
+   }
+
+   return { success: false };

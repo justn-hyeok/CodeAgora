@@ -1,0 +1,74 @@
+name: Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    # Skip if PR has 'review:skip' label
+    if: |
+      (github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'review:skip')) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '/review'))
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install OpenCode CLI
+        run: |
+          # Install OpenCode CLI globally
+          npm install -g @opencode/cli
+          # Configure providers (add your API keys as secrets)
+          # Example: opencode config set openai.apiKey ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Run code review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Add provider API keys as environment variables
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Get PR number
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            PR_NUMBER=${{ github.event.pull_request.number }}
+          else
+            PR_NUMBER=${{ github.event.issue.number }}
+          fi
+
+          # Run review
+          pnpm run review --pr $PR_NUMBER --github
+
+      - name: Upload review results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-results
+          path: |
+            review-*.md
+            review-*.json
+          retention-days: 30
