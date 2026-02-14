@@ -1,14 +1,20 @@
 # Dependencies
 node_modules/
 pnpm-lock.yaml
+.pnpm-store/
 
 # Build outputs
 dist/
 *.tsbuildinfo
 
-# Environment
+# Environment & Secrets
 .env
 .env.local
+.env.production
+.env.*.local
+*.key
+secrets/
+*.secret
 
 # IDE
 .vscode/
@@ -22,15 +28,30 @@ Thumbs.db
 
 # Test coverage
 coverage/
+.nyc_output/
 
 # Logs
 *.log
 npm-debug.log*
 pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Temporary files
 /tmp/
 *.tmp
 
+# Review results & cache
+.reviews/
+reviews/
+.cache/
+.review-cache/
+
+# Storage
+.storage/
+*.db
+*.sqlite
+
+# OMC
 .omc
 
