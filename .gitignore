@@ -55,3 +55,8 @@ reviews/
 # OMC
 .omc
 
+# Archives
+.archive/
+
+# CodeAgora runtime
+.codeagora/

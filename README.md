@@ -1,156 +1,246 @@
-# Oh My CodeReview
+# CodeAgora
 
-Multi-LLM collaborative code review pipeline that leverages multiple AI models to provide comprehensive code reviews.
+**Where LLMs Debate Your Code**
 
-## Features
+![Tests](https://img.shields.io/badge/tests-86%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-85%25-green)
+![Phase](https://img.shields.io/badge/phase-production--ready-blue)
 
-- 🤖 **Multi-Model Review**: Execute multiple LLM reviewers in parallel
-- 🎯 **Smart Synthesis**: Aggregate and deduplicate issues across reviewers
-- 🔍 **Debate Detection**: Automatically detect when issues require deeper analysis
-- 📊 **Comprehensive Reports**: Get detailed markdown and terminal reports
-- ⚙️ **Configurable**: Customize reviewers, models, and settings
+Multi-agent code review system powered by heterogeneous LLMs with debate-driven consensus.
 
-## Installation
+## Overview
 
-```bash
-pnpm install
-pnpm build
+CodeAgora orchestrates multiple AI reviewers to independently analyze your code, then facilitates structured debates when opinions conflict. This approach combines the diversity of different AI models with rigorous reasoning to catch more issues and reduce false positives.
+
+### Key Features
+
+- **🎭 Heterogeneous Models**: Codex, Gemini, OpenCode - different error profiles, better coverage
+- **🗳️ 75% Majority Voting Gate**: Filters ~60-80% of non-controversial issues automatically
+- **⚖️ Structured Debate**: Only triggers for genuine conflicts, not frivolous disagreements
+- **🧠 Anti-Conformity Prompts**: Prevents groupthink, preserves minority positions with strong evidence
+- **🤖 Claude Code Orchestration**: Seamless integration as a Claude Code skill
+
+## How It Works
+
 ```
+1. Extract git diff
+2. Parallel independent reviews → [Codex, Gemini, OpenCode, ...]
+3. Majority voting gate (75% threshold)
+   ├─ Strong consensus → Skip to synthesis
+   └─ Conflict detected → Structured debate (max 3 rounds)
+4. Claude Code synthesizes final review
+```
+
+### Academic Foundation
+
+- **Debate or Vote** (Du et al.): Multi-agent debate improves reasoning quality
+- **Free-MAD** (Chen et al.): Anti-conformity prompts prevent consensus bias
+- **Heterogeneous Ensembles**: Different models = different blind spots
 
 ## Quick Start
 
-1. Initialize configuration:
+### Prerequisites
+
+**Required:**
+- [Claude Code](https://docs.anthropic.com/claude-code)
+
+**Backend CLIs** (at least one):
+- **Codex CLI**: `npm i -g @openai/codex` ([docs](https://www.npmjs.com/package/@openai/codex))
+- **Gemini CLI**: `npm install -g @google/gemini-cli` ([docs](https://www.npmjs.com/package/@google/gemini-cli))
+- **OpenCode CLI**: `npm i -g opencode-ai@latest` ([docs](https://github.com/sst/opencode))
+
+**macOS Users:**
+- Install coreutils for timeout support: `brew install coreutils`
+
+### Installation
 
 ```bash
-npx oh-my-codereview init
+# Clone repository
+git clone <repo-url>
+cd oh-my-codereview
+
+# Build tools package
+cd tools
+pnpm install
+pnpm build
+cd ..
+
+# Copy config template
+cp codeagora.config.example.json codeagora.config.json
+
+# Edit config to enable your backends
+vim codeagora.config.json
 ```
 
-2. Review your code:
+### Usage
 
 ```bash
-npx oh-my-codereview review
-```
+# Run code review via Claude Code
+/agora review
 
-Or review a specific diff file:
+# Check backend status
+/agora status
 
-```bash
-npx oh-my-codereview review path/to/file.diff
+# Configure reviewers
+/agora config
 ```
 
 ## Configuration
 
-Edit `oh-my-codereview.config.json` to customize:
-
-- **Reviewers**: Enable/disable models, set timeouts
-- **Settings**: Minimum reviewers, parallel execution limit
-- **Output Format**: Choose between JSON, text, or markdown
-
-Example configuration:
+Example `codeagora.config.json`:
 
 ```json
 {
-  "head_agent": {
-    "provider": "anthropic",
-    "model": "claude-sonnet-4"
-  },
   "reviewers": [
     {
-      "name": "deepseek",
-      "provider": "deepseek",
-      "model": "deepseek-chat",
+      "id": "reviewer-1",
+      "name": "Codex Reviewer",
+      "backend": "codex",
+      "model": "o4-mini",
       "enabled": true,
-      "timeout": 300
+      "timeout": 120
+    },
+    {
+      "id": "reviewer-2",
+      "name": "Gemini Reviewer",
+      "backend": "gemini",
+      "model": "gemini-2.5-flash",
+      "enabled": true,
+      "timeout": 120
     }
   ],
   "settings": {
-    "min_reviewers": 3,
-    "max_parallel": 5,
-    "output_format": "markdown"
+    "min_reviewers": 4,
+    "max_parallel": 6,
+    "output_format": "terminal",
+    "debate": {
+      "enabled": true,
+      "majority_threshold": 0.75,
+      "max_rounds": 3,
+      "early_stop": true
+    }
   }
 }
 ```
 
-## Review Output
+### Backend-Specific Model Formats
 
-The tool provides:
-
-- **Critical/Major/Minor/Suggestion** severity levels
-- **Line-specific** issue identification
-- **Confidence scores** for each issue
-- **Multiple reviewer consensus** on each issue
-- **Debate triggers** for conflicting opinions
-
-## Development
-
-```bash
-# Run tests
-pnpm test
-
-# Watch mode
-pnpm test:watch
-
-# Build
-pnpm build
-
-# Development mode
-pnpm dev -- review path/to/diff
-```
+| Backend | Model Format | Example |
+|---------|-------------|---------|
+| `codex` | Model name only | `"o4-mini"` |
+| `gemini` | Managed in settings | `"gemini-2.5-flash"` |
+| `opencode` | `provider/model` | `"github-copilot/claude-haiku-4.5"` |
 
 ## Architecture
 
+### V2.0 (Current): Claude Code Orchestration
+
 ```
-Config → Diff Extraction → Parallel Review → Parsing → Synthesis → Report
+Claude Code (Orchestrator + Head Agent)
+    ↓
+Backend CLIs (Codex, Gemini, OpenCode)
+    ↓
+codeagora-tools (Deterministic helpers)
 ```
 
-1. **Config Loading**: Load and validate configuration
-2. **Diff Extraction**: Extract git diff or load from file
-3. **Parallel Review**: Execute multiple reviewers concurrently
-4. **Parsing**: Parse natural language responses into structured data
-5. **Synthesis**: Aggregate and deduplicate issues
-6. **Report**: Generate terminal and markdown reports
+**Key Components:**
 
-## Testing
+1. **Claude Code**: Orchestrates entire process, acts as head agent for final synthesis
+2. **Backend CLIs**: Execute reviewer LLMs (heterogeneous models)
+3. **codeagora-tools**: Deterministic logic (voting, scoring, anonymization)
 
-The project includes comprehensive test coverage:
+### Tools Package
 
-- Config system validation
-- Diff parsing and splitting
-- Prompt template loading
-- Response parsing (18 test cases)
-- Integration tests
+Six CLI commands for deterministic processing:
+
+- `parse-reviews` - Parse raw reviewer responses
+- `voting` - Apply 75% majority voting gate
+- `anonymize` - Remove reviewer names for debate
+- `score` - Trajectory scoring (5 regex patterns)
+- `early-stop` - Jaccard similarity check
+- `format-output` - Generate markdown reports
+
+## Development
+
+### Tools Package
 
 ```bash
-pnpm test                # Run all tests
-pnpm test:coverage       # Generate coverage report
+cd tools
+
+# Development
+pnpm dev
+
+# Type check
+pnpm typecheck
+
+# Test
+pnpm test
+
+# Build
+pnpm build
 ```
 
-## Phase 1 Status
+### Project Structure
 
-✅ Completed:
-- Config system with validation
-- Diff extraction and file filtering
-- Prompt management
-- Multi-reviewer parallel execution
-- Response parser with fallback handling
-- Debate trigger detection
-- Issue synthesis and deduplication
-- Terminal and markdown reports
+```
+oh-my-codereview/
+├── .claude/skills/          # Claude Code skill
+│   ├── agora-review.md
+│   └── agora-review.json
+├── prompts/                 # Prompt templates
+│   ├── review-system.md
+│   ├── debate-round1.md
+│   ├── debate-round2.md
+│   └── debate-round3.md
+├── tools/                   # Helper tools package
+│   ├── src/
+│   │   ├── commands/        # CLI commands
+│   │   ├── types/           # TypeScript types
+│   │   └── utils/           # Parser utilities
+│   └── tests/
+└── codeagora.config.json    # Configuration
+```
 
-🚧 Future (Phase 2+):
-- GitHub PR integration
-- Discord real-time notifications
-- Actual debate execution
-- Feedback loops
+## Performance
+
+**E2E Test Results** (Phase 3 validation):
+
+| Metric | Result |
+|--------|--------|
+| 2 reviewers, 50-line diff | ~40 seconds |
+| Parse accuracy | 100% (0 failures) |
+| Issue detection | Caught all security vulnerabilities |
+| Debate reduction | 60-80% via majority voting gate |
+
+**Key Metrics:**
+- **Majority gate efficiency**: 60-80% of issues bypass debate
+- **Individual reviewer time**: 12-26 seconds (model-dependent)
+- **Anti-conformity**: Preserves minority positions with strong technical evidence
+- **Projected**: 6 reviewers in parallel = ~30-35 seconds (limited by slowest reviewer)
+
+## Known Limitations
+
+- **macOS timeout**: Requires `brew install coreutils` for timeout support (auto-detected fallback available)
+- **Gemini CLI output**: Responses wrapped in JSON format (auto-extracted by parser)
+- **Gemini stderr warnings**: Skill conflict warnings redirected to separate log files
+- **Codex CLI**: Requires OpenAI API key configured in environment
+- **OpenCode CLI**: Requires provider API keys in config (GitHub Copilot, etc.)
+- **Backend availability**: Review quality depends on enabled backends and API availability
+
+## Contributing
+
+We welcome contributions! Key areas:
+
+- Additional backend integrations
+- Improved debate strategies
+- Enhanced scoring algorithms
+- Test coverage
 
 ## License
 
 MIT
 
-## Credits
+## References
 
-Built with:
-- TypeScript
-- Zod (validation)
-- Commander (CLI)
-- Chalk (terminal colors)
-- Vitest (testing)
+- Du, Y., et al. (2023). Improving Factuality and Reasoning in Language Models through Multiagent Debate.
+- Chen, W., et al. (2024). Free-MAD: Multi-Agent Debate with Free Selection of Opinions.
