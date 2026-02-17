@@ -1,0 +1,173 @@
+/**
+ * Filesystem utilities for .ca/ directory management
+ */
+
+import fs from 'fs/promises';
+import path from 'path';
+import { SessionMetadata } from '../types/core.js';
+
+// ============================================================================
+// Directory Structure
+// ============================================================================
+
+export const CA_ROOT = '.ca';
+
+export function getSessionDir(date: string, sessionId: string): string {
+  return path.join(CA_ROOT, 'sessions', date, sessionId);
+}
+
+export function getReviewsDir(date: string, sessionId: string): string {
+  return path.join(getSessionDir(date, sessionId), 'reviews');
+}
+
+export function getDiscussionsDir(date: string, sessionId: string): string {
+  return path.join(getSessionDir(date, sessionId), 'discussions');
+}
+
+export function getUnconfirmedDir(date: string, sessionId: string): string {
+  return path.join(getSessionDir(date, sessionId), 'unconfirmed');
+}
+
+export function getLogsDir(date: string, sessionId: string): string {
+  return path.join(CA_ROOT, 'logs', date, sessionId);
+}
+
+// ============================================================================
+// File Paths
+// ============================================================================
+
+export function getConfigPath(): string {
+  return path.join(CA_ROOT, 'config.json');
+}
+
+export function getSuggestionsPath(date: string, sessionId: string): string {
+  return path.join(getSessionDir(date, sessionId), 'suggestions.md');
+}
+
+export function getReportPath(date: string, sessionId: string): string {
+  return path.join(getSessionDir(date, sessionId), 'report.md');
+}
+
+export function getResultPath(date: string, sessionId: string): string {
+  return path.join(getSessionDir(date, sessionId), 'result.md');
+}
+
+export function getMetadataPath(date: string, sessionId: string): string {
+  return path.join(getSessionDir(date, sessionId), 'metadata.json');
+}
+
+// ============================================================================
+// Directory Creation
+// ============================================================================
+
+export async function ensureDir(dirPath: string): Promise<void> {
+  try {
+    await fs.mkdir(dirPath, { recursive: true });
+  } catch (error) {
+    // Ignore if directory already exists
+    if (error instanceof Error && 'code' in error && error.code !== 'EEXIST') {
+      throw error;
+    }
+  }
+}
+
+export async function initSessionDirs(
+  date: string,
+  sessionId: string
+): Promise<void> {
+  const dirs = [
+    getSessionDir(date, sessionId),
+    getReviewsDir(date, sessionId),
+    getDiscussionsDir(date, sessionId),
+    getUnconfirmedDir(date, sessionId),
+    getLogsDir(date, sessionId),
+  ];
+
+  await Promise.all(dirs.map((dir) => ensureDir(dir)));
+}
+
+// ============================================================================
+// File Operations
+// ============================================================================
+
+export async function writeJson(filePath: string, data: unknown): Promise<void> {
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+export async function readJson<T>(filePath: string): Promise<T> {
+  const content = await fs.readFile(filePath, 'utf-8');
+  return JSON.parse(content) as T;
+}
+
+export async function writeMarkdown(
+  filePath: string,
+  content: string
+): Promise<void> {
+  await fs.writeFile(filePath, content, 'utf-8');
+}
+
+export async function readMarkdown(filePath: string): Promise<string> {
+  return fs.readFile(filePath, 'utf-8');
+}
+
+export async function appendMarkdown(
+  filePath: string,
+  content: string
+): Promise<void> {
+  await fs.appendFile(filePath, content, 'utf-8');
+}
+
+// ============================================================================
+// Session ID Generation
+// ============================================================================
+
+export async function getNextSessionId(date: string): Promise<string> {
+  const sessionsDir = path.join(CA_ROOT, 'sessions', date);
+
+  try {
+    await ensureDir(sessionsDir);
+    const entries = await fs.readdir(sessionsDir);
+    const sessionNumbers = entries
+      .filter((e) => /^\d{3}$/.test(e))
+      .map((e) => parseInt(e, 10));
+
+    const maxId = sessionNumbers.length > 0 ? Math.max(...sessionNumbers) : 0;
+    return String(maxId + 1).padStart(3, '0');
+  } catch (error) {
+    return '001';
+  }
+}
+
+// ============================================================================
+// Metadata Operations
+// ============================================================================
+
+export async function writeSessionMetadata(
+  date: string,
+  sessionId: string,
+  metadata: SessionMetadata
+): Promise<void> {
+  const metadataPath = getMetadataPath(date, sessionId);
+  await writeJson(metadataPath, metadata);
+}
+
+export async function readSessionMetadata(
+  date: string,
+  sessionId: string
+): Promise<SessionMetadata> {
+  const metadataPath = getMetadataPath(date, sessionId);
+  return readJson<SessionMetadata>(metadataPath);
+}
+
+export async function updateSessionStatus(
+  date: string,
+  sessionId: string,
+  status: SessionMetadata['status']
+): Promise<void> {
+  const metadata = await readSessionMetadata(date, sessionId);
+  metadata.status = status;
+  if (status === 'completed' || status === 'failed') {
+    metadata.completedAt = Date.now();
+  }
+  await writeSessionMetadata(date, sessionId, metadata);
+}

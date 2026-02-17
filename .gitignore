@@ -60,3 +60,4 @@ reviews/
 
 # CodeAgora runtime
 .codeagora/
+.ca/

@@ -1,0 +1,178 @@
+/**
+ * Pipeline Orchestrator
+ * Connects all layers: L1 → L2 → L3
+ */
+
+import { SessionManager } from '../session/manager.js';
+import { loadConfig, getEnabledReviewers, getEnabledSupporters } from '../config/loader.js';
+import { groupDiff } from '../l3/grouping.js';
+import { executeReviewers, checkForfeitThreshold } from '../l1/reviewer.js';
+import { writeAllReviews } from '../l1/writer.js';
+import { applyThreshold } from '../l2/threshold.js';
+import { runModerator } from '../l2/moderator.js';
+import { writeModeratorReport, writeSuggestions } from '../l2/writer.js';
+import { deduplicateDiscussions } from '../l2/deduplication.js';
+import { extractMultipleSnippets } from '../utils/diff.js';
+import { createLogger } from '../utils/logger.js';
+import { makeHeadVerdict, scanUnconfirmedQueue } from '../l3/verdict.js';
+import { writeHeadVerdict } from '../l3/writer.js';
+import type { ReviewerInput } from '../l1/reviewer.js';
+import type { EvidenceDocument } from '../types/core.js';
+import fs from 'fs/promises';
+
+// ============================================================================
+// Main Pipeline
+// ============================================================================
+
+export interface PipelineInput {
+  diffPath: string;
+}
+
+export interface PipelineResult {
+  sessionId: string;
+  date: string;
+  status: 'success' | 'error';
+  error?: string;
+}
+
+/**
+ * Run complete V3 pipeline
+ */
+export async function runPipeline(input: PipelineInput): Promise<PipelineResult> {
+  try {
+    // Load config
+    const config = await loadConfig();
+
+    // Create session
+    const session = await SessionManager.create(input.diffPath);
+    const date = session.getDate();
+    const sessionId = session.getSessionId();
+
+    // Read diff
+    const diffContent = await fs.readFile(input.diffPath, 'utf-8');
+
+    // === L3 HEAD: Diff Grouping ===
+    const fileGroups = groupDiff(diffContent);
+
+    // === L1 REVIEWERS: Parallel Execution ===
+    const enabledReviewers = getEnabledReviewers(config);
+
+    // Distribute groups to reviewers (round-robin)
+    const reviewerInputs: ReviewerInput[] = [];
+    for (let i = 0; i < enabledReviewers.length; i++) {
+      const group = fileGroups[i % fileGroups.length];
+      reviewerInputs.push({
+        config: enabledReviewers[i],
+        groupName: group.name,
+        diffContent: group.diffContent,
+        prSummary: group.prSummary,
+      });
+    }
+
+    const reviewResults = await executeReviewers(
+      reviewerInputs,
+      config.errorHandling.maxRetries
+    );
+
+    // Check forfeit threshold
+    const forfeitCheck = checkForfeitThreshold(
+      reviewResults,
+      config.errorHandling.forfeitThreshold
+    );
+
+    if (!forfeitCheck.passed) {
+      await session.setStatus('failed');
+      return {
+        sessionId,
+        date,
+        status: 'error',
+        error: `Too many reviewers forfeited: ${(forfeitCheck.forfeitRate * 100).toFixed(1)}%`,
+      };
+    }
+
+    // Write review outputs
+    await writeAllReviews(date, sessionId, reviewResults);
+
+    // === L2 MODERATOR: Discussion Registration ===
+    const allEvidenceDocs: EvidenceDocument[] = reviewResults.flatMap(
+      (r) => r.evidenceDocs
+    );
+
+    const thresholdResult = applyThreshold(allEvidenceDocs, config.discussion);
+
+    // Deduplicate discussions
+    const { deduplicated, mergedCount } = deduplicateDiscussions(thresholdResult.discussions);
+    const logger = createLogger(date, sessionId, 'pipeline');
+    logger.info(`Deduplicated discussions: ${mergedCount} merged`);
+
+    // Extract code snippets for discussions
+    const snippets = extractMultipleSnippets(
+      diffContent,
+      deduplicated.map((d) => ({
+        filePath: d.filePath,
+        lineRange: d.lineRange,
+      })),
+      config.discussion.codeSnippetRange
+    );
+
+    // Attach snippets to discussions
+    for (const discussion of deduplicated) {
+      const key = `${discussion.filePath}:${discussion.lineRange[0]}-${discussion.lineRange[1]}`;
+      const snippet = snippets.get(key);
+      if (snippet) {
+        discussion.codeSnippet = snippet.code;
+      }
+    }
+
+    // === L2 MODERATOR: Run Discussions ===
+    const enabledSupporters = getEnabledSupporters(config);
+
+    const moderatorReport = await runModerator({
+      config: config.moderator,
+      supporterConfigs: enabledSupporters,
+      discussions: deduplicated,
+      settings: config.discussion,
+      date,
+      sessionId,
+    });
+
+    // Add unconfirmed and suggestions to report
+    moderatorReport.unconfirmedIssues = thresholdResult.unconfirmed;
+    moderatorReport.suggestions = thresholdResult.suggestions;
+
+    // Write moderator report
+    await writeModeratorReport(date, sessionId, moderatorReport);
+    await writeSuggestions(date, sessionId, thresholdResult.suggestions);
+
+    // === L3 HEAD: Scan Unconfirmed Queue ===
+    const { promoted, dismissed } = scanUnconfirmedQueue(
+      moderatorReport.unconfirmedIssues
+    );
+
+    // Add promoted issues to discussions
+    // (In production, Head would create new discussions or make direct decisions)
+
+    // === L3 HEAD: Final Verdict ===
+    const headVerdict = makeHeadVerdict(moderatorReport);
+    await writeHeadVerdict(date, sessionId, headVerdict);
+
+    // Flush logs
+    await logger.flush();
+
+    // Complete session
+    await session.setStatus('completed');
+
+    return {
+      sessionId,
+      date,
+      status: 'success',
+    };
+  } catch (error) {
+    return {
+      sessionId: 'unknown',
+      date: 'unknown',
+      status: 'error',
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}

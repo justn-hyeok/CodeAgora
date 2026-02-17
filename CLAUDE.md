@@ -89,4 +89,5 @@ oh-my-codereview/
 ## 참고 문서
 1. [PRD](docs/1_PRD.md)
 2. [PHASE_PLAN](docs/2_PHASE_PLAN.md)
-3. [IMPLEMENT_PLAN](docs/4_IMPLEMENT_PLAN.md)
+3. [V3_DESIGN](docs/3_V3_DESIGN.md)
+4. [IMPLEMENT_PLAN](docs/4_IMPLEMENT_PLAN.md)
