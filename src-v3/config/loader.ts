@@ -41,10 +41,19 @@ export function getEnabledReviewers(config: Config) {
 }
 
 /**
- * Get enabled supporters
+ * Get enabled supporters from pool
  */
 export function getEnabledSupporters(config: Config) {
-  return config.supporters.filter((s) => s.enabled);
+  return config.supporters.pool.filter((s) => s.enabled);
+}
+
+/**
+ * Get Devil's Advocate if enabled
+ */
+export function getDevilsAdvocate(config: Config) {
+  return config.supporters.devilsAdvocate.enabled
+    ? config.supporters.devilsAdvocate
+    : null;
 }
 
 /**

@@ -6,6 +6,14 @@
 import type { Discussion, DiscussionRound, DiscussionVerdict, ModeratorReport } from '../types/core.js';
 import { writeMarkdown, appendMarkdown, getDiscussionsDir, getUnconfirmedDir, getSuggestionsPath, getReportPath } from '../utils/fs.js';
 import path from 'path';
+import { writeFile } from 'fs/promises';
+
+// Type for selected supporter (imported from moderator.ts logic)
+interface SelectedSupporter {
+  id: string;
+  model: string;
+  assignedPersona?: string;
+}
 
 // ============================================================================
 // Discussion Writers
@@ -92,6 +100,45 @@ export async function writeModeratorReport(
 
   const content = formatModeratorReport(report);
   await writeMarkdown(reportPath, content);
+}
+
+/**
+ * Write supporters combination log
+ */
+export async function writeSupportersLog(
+  date: string,
+  sessionId: string,
+  discussionId: string,
+  supporters: SelectedSupporter[]
+): Promise<void> {
+  const discussionsDir = getDiscussionsDir(date, sessionId);
+  const discussionDir = path.join(discussionsDir, discussionId);
+  const supportersFile = path.join(discussionDir, 'supporters.json');
+
+  // Ensure discussion directory exists
+  const { ensureDir } = await import('../utils/fs.js');
+  await ensureDir(discussionDir);
+
+  // Build combination strings
+  const models = supporters.map((s) => s.model).join('+');
+  const personas = supporters
+    .map((s) => {
+      if (!s.assignedPersona) return 'none';
+      const basename = path.basename(s.assignedPersona, '.md');
+      return basename;
+    })
+    .join('+');
+
+  const log = {
+    supporters: supporters.map((s) => ({
+      id: s.id,
+      model: s.model,
+      persona: s.assignedPersona || null,
+    })),
+    combination: `${models} / ${personas}`,
+  };
+
+  await writeFile(supportersFile, JSON.stringify(log, null, 2), 'utf-8');
 }
 
 // ============================================================================

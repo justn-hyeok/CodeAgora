@@ -9,45 +9,62 @@ import { z } from 'zod';
 // Backend Types
 // ============================================================================
 
-export const BackendSchema = z.enum(['opencode', 'codex', 'gemini']);
+export const BackendSchema = z.enum(['opencode', 'codex', 'gemini', 'claude']);
 export type Backend = z.infer<typeof BackendSchema>;
 
 // ============================================================================
-// Reviewer Config (L1)
+// Agent Config (Unified for Reviewers, Supporters, Moderator)
 // ============================================================================
 
-export const ReviewerConfigSchema = z.object({
-  id: z.string(),
-  backend: BackendSchema,
-  provider: z.string().optional(), // e.g., "kimi", "grok" for OpenCode
-  model: z.string(),
-  enabled: z.boolean().default(true),
-  timeout: z.number().default(120),
-});
-export type ReviewerConfig = z.infer<typeof ReviewerConfigSchema>;
+export const AgentConfigSchema = z
+  .object({
+    id: z.string(),
+    label: z.string().optional(),
+    model: z.string(),
+    backend: BackendSchema,
+    provider: z.string().optional(),
+    persona: z.string().optional(),
+    timeout: z.number().default(120),
+    enabled: z.boolean().default(true),
+  })
+  .refine(
+    (data) => data.backend !== 'opencode' || data.provider !== undefined,
+    {
+      message: "provider is required when backend is 'opencode'",
+      path: ['provider'],
+    }
+  );
+export type AgentConfig = z.infer<typeof AgentConfigSchema>;
 
 // ============================================================================
-// Supporter Config (L2)
+// Legacy Schemas (for backward compatibility during migration)
 // ============================================================================
 
-export const SupporterConfigSchema = z.object({
-  id: z.string(),
-  backend: BackendSchema,
-  model: z.string(),
-  role: z.string(), // e.g., "검증자", "변호사", "검사"
-  enabled: z.boolean().default(true),
-});
-export type SupporterConfig = z.infer<typeof SupporterConfigSchema>;
+export const ReviewerConfigSchema = AgentConfigSchema;
+export type ReviewerConfig = AgentConfig;
 
-// ============================================================================
-// Moderator Config (L2)
-// ============================================================================
+export const SupporterConfigSchema = AgentConfigSchema;
+export type SupporterConfig = AgentConfig;
 
 export const ModeratorConfigSchema = z.object({
   backend: BackendSchema,
   model: z.string(),
 });
 export type ModeratorConfig = z.infer<typeof ModeratorConfigSchema>;
+
+// ============================================================================
+// Supporter Pool Config
+// ============================================================================
+
+export const SupporterPoolConfigSchema = z.object({
+  pool: z.array(AgentConfigSchema).min(1),
+  pickCount: z.number().int().positive().default(2),
+  pickStrategy: z.enum(['random', 'round-robin']).default('random'),
+  devilsAdvocate: AgentConfigSchema,
+  personaPool: z.array(z.string()).min(1),
+  personaAssignment: z.enum(['random', 'fixed']).default('random'),
+});
+export type SupporterPoolConfig = z.infer<typeof SupporterPoolConfigSchema>;
 
 // ============================================================================
 // Discussion Settings
@@ -80,8 +97,8 @@ export type ErrorHandling = z.infer<typeof ErrorHandlingSchema>;
 // ============================================================================
 
 export const ConfigSchema = z.object({
-  reviewers: z.array(ReviewerConfigSchema).min(1),
-  supporters: z.array(SupporterConfigSchema).min(1),
+  reviewers: z.array(AgentConfigSchema).min(1),
+  supporters: SupporterPoolConfigSchema,
   moderator: ModeratorConfigSchema,
   discussion: DiscussionSettingsSchema,
   errorHandling: ErrorHandlingSchema,

@@ -84,6 +84,8 @@ function buildCommand(
       return buildCodexCommand(model, promptFile);
     case 'gemini':
       return buildGeminiCommand(model, promptFile);
+    case 'claude':
+      return buildClaudeCommand(model, promptFile);
     default:
       throw new Error(`Unsupported backend: ${backend}`);
   }
@@ -107,4 +109,11 @@ function buildGeminiCommand(model: string, promptFile: string): string {
   // Gemini CLI: cat prompt.txt | gemini -p "$(cat prompt.txt)"
   // Note: Gemini -p expects the prompt as argument, so we use command substitution
   return `gemini -p "$(cat "${promptFile}")"`;
+}
+
+function buildClaudeCommand(model: string, promptFile: string): string {
+  // TODO: Verify actual Claude Code CLI invocation syntax
+  // Placeholder implementation - assumes similar pattern to other CLIs
+  // Expected: cat prompt.txt | claude [model] [options]
+  return `cat "${promptFile}" | claude --model ${model}`;
 }

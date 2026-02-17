@@ -4,9 +4,98 @@
  */
 
 import type { Discussion, DiscussionRound, DiscussionVerdict, ModeratorReport, EvidenceDocument } from '../types/core.js';
-import type { ModeratorConfig, SupporterConfig, DiscussionSettings } from '../types/config.js';
+import type { ModeratorConfig, SupporterConfig, DiscussionSettings, SupporterPoolConfig, AgentConfig } from '../types/config.js';
 import { executeBackend } from '../l1/backend.js';
-import { writeDiscussionRound, writeDiscussionVerdict } from './writer.js';
+import { writeDiscussionRound, writeDiscussionVerdict, writeSupportersLog } from './writer.js';
+import { readFile } from 'fs/promises';
+import path from 'path';
+
+// ============================================================================
+// Supporter Selection
+// ============================================================================
+
+export interface SelectedSupporter extends AgentConfig {
+  assignedPersona?: string;
+}
+
+/**
+ * Select supporters from pool with random persona assignment
+ */
+export function selectSupporters(
+  poolConfig: SupporterPoolConfig
+): SelectedSupporter[] {
+  const { pool, pickCount, devilsAdvocate, personaPool } = poolConfig;
+
+  // Filter enabled supporters from pool
+  const enabledPool = pool.filter((s) => s.enabled);
+
+  if (enabledPool.length < pickCount) {
+    throw new Error(
+      `Insufficient enabled supporters: ${enabledPool.length} available, ${pickCount} required`
+    );
+  }
+
+  // Random pick without duplicates
+  const selectedFromPool = randomPick(enabledPool, pickCount);
+
+  // Assign random personas to selected supporters
+  const withPersonas = selectedFromPool.map((supporter) => ({
+    ...supporter,
+    assignedPersona: randomElement(personaPool),
+  }));
+
+  // Add Devil's Advocate (with its fixed persona if set)
+  const supporters: SelectedSupporter[] = [];
+
+  if (devilsAdvocate.enabled) {
+    supporters.push({
+      ...devilsAdvocate,
+      assignedPersona: devilsAdvocate.persona,
+    });
+  }
+
+  supporters.push(...withPersonas);
+
+  return supporters;
+}
+
+/**
+ * Random pick N elements from array without duplicates
+ */
+function randomPick<T>(array: T[], count: number): T[] {
+  const shuffled = [...array].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
+/**
+ * Random pick one element from array
+ */
+function randomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+// ============================================================================
+// Persona Loading
+// ============================================================================
+
+/**
+ * Load persona file content
+ */
+async function loadPersona(personaPath: string): Promise<string> {
+  try {
+    // Resolve path relative to project root
+    const fullPath = path.isAbsolute(personaPath)
+      ? personaPath
+      : path.join(process.cwd(), personaPath);
+
+    const content = await readFile(fullPath, 'utf-8');
+    return content.trim();
+  } catch (error) {
+    // Gracefully handle missing persona files
+    console.warn(`[Persona] Failed to load ${personaPath}:`, error instanceof Error ? error.message : error);
+    return '';
+  }
+}
 
 // ============================================================================
 // Moderator Orchestration
@@ -14,7 +103,7 @@ import { writeDiscussionRound, writeDiscussionVerdict } from './writer.js';
 
 export interface ModeratorInput {
   config: ModeratorConfig;
-  supporterConfigs: SupporterConfig[];
+  supporterPoolConfig: SupporterPoolConfig;
   discussions: Discussion[];
   settings: DiscussionSettings;
   date: string;
@@ -25,7 +114,7 @@ export interface ModeratorInput {
  * Run all discussions and generate final report
  */
 export async function runModerator(input: ModeratorInput): Promise<ModeratorReport> {
-  const { config, supporterConfigs, discussions, settings, date, sessionId } = input;
+  const { config, supporterPoolConfig, discussions, settings, date, sessionId } = input;
 
   const verdicts: DiscussionVerdict[] = [];
 
@@ -33,7 +122,7 @@ export async function runModerator(input: ModeratorInput): Promise<ModeratorRepo
     const verdict = await runDiscussion(
       discussion,
       config,
-      supporterConfigs,
+      supporterPoolConfig,
       settings,
       date,
       sessionId
@@ -60,7 +149,7 @@ export async function runModerator(input: ModeratorInput): Promise<ModeratorRepo
 async function runDiscussion(
   discussion: Discussion,
   moderatorConfig: ModeratorConfig,
-  supporterConfigs: SupporterConfig[],
+  supporterPoolConfig: SupporterPoolConfig,
   settings: DiscussionSettings,
   date: string,
   sessionId: string
@@ -83,13 +172,19 @@ async function runDiscussion(
     return verdict;
   }
 
+  // Select supporters for this discussion
+  const selectedSupporters = selectSupporters(supporterPoolConfig);
+
+  // Log supporter combination
+  await writeSupportersLog(date, sessionId, discussion.id, selectedSupporters);
+
   // Run up to maxRounds
   for (let roundNum = 1; roundNum <= settings.maxRounds; roundNum++) {
     const round = await runRound(
       discussion,
       roundNum,
       moderatorConfig,
-      supporterConfigs
+      selectedSupporters
     );
 
     rounds.push(round);
@@ -144,15 +239,15 @@ async function runRound(
   discussion: Discussion,
   roundNum: number,
   moderatorConfig: ModeratorConfig,
-  supporterConfigs: SupporterConfig[]
+  selectedSupporters: SelectedSupporter[]
 ): Promise<DiscussionRound> {
   // Moderator prompts the discussion
   const moderatorPrompt = buildModeratorPrompt(discussion, roundNum);
 
   // Supporters respond in parallel
   const supporterResponses = await Promise.all(
-    supporterConfigs.map((config) =>
-      executeSupporterResponse(config, discussion, moderatorPrompt)
+    selectedSupporters.map((supporter) =>
+      executeSupporterResponse(supporter, discussion, moderatorPrompt)
     )
   );
 
@@ -164,23 +259,35 @@ async function runRound(
 }
 
 async function executeSupporterResponse(
-  config: SupporterConfig,
+  supporter: SelectedSupporter,
   discussion: Discussion,
   moderatorPrompt: string
 ): Promise<{ supporterId: string; response: string; stance: 'agree' | 'disagree' | 'neutral' }> {
-  const prompt = `${moderatorPrompt}\n\nAs ${config.role}, provide your verdict:\n- AGREE: Evidence is valid\n- DISAGREE: Evidence is flawed\n- NEUTRAL: Needs more information\n\nProvide your stance and reasoning.`;
+  // Load persona if assigned
+  let personaContent = '';
+  if (supporter.assignedPersona) {
+    personaContent = await loadPersona(supporter.assignedPersona);
+  }
+
+  // Build prompt with persona
+  const basePrompt = `${moderatorPrompt}\n\nProvide your verdict:\n- AGREE: Evidence is valid\n- DISAGREE: Evidence is flawed\n- NEUTRAL: Needs more information\n\nProvide your stance and reasoning.`;
+
+  const prompt = personaContent
+    ? `${personaContent}\n\n---\n\n${basePrompt}`
+    : basePrompt;
 
   const response = await executeBackend({
-    backend: config.backend,
-    model: config.model,
+    backend: supporter.backend,
+    model: supporter.model,
+    provider: supporter.provider,
     prompt,
-    timeout: 120,
+    timeout: supporter.timeout,
   });
 
   const stance = parseStance(response);
 
   return {
-    supporterId: config.id,
+    supporterId: supporter.id,
     response,
     stance,
   };

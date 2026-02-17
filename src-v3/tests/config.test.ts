@@ -32,15 +32,40 @@ describe('Config Validation', () => {
         timeout: 120,
       },
     ],
-    supporters: [
-      {
-        id: 's1',
-        backend: 'codex',
-        model: 'o4-mini',
-        role: '검증자',
+    supporters: {
+      pool: [
+        {
+          id: 'sp1',
+          backend: 'codex',
+          model: 'o4-mini',
+          enabled: true,
+          timeout: 120,
+        },
+        {
+          id: 'sp2',
+          backend: 'gemini',
+          model: 'gemini-flash',
+          enabled: true,
+          timeout: 120,
+        },
+      ],
+      pickCount: 2,
+      pickStrategy: 'random',
+      devilsAdvocate: {
+        id: 's-devil',
+        backend: 'opencode',
+        provider: 'opencode-zen',
+        model: 'grok-fast',
+        persona: '.ca/personas/devil.md',
         enabled: true,
+        timeout: 120,
       },
-    ],
+      personaPool: [
+        '.ca/personas/strict.md',
+        '.ca/personas/pragmatic.md',
+      ],
+      personaAssignment: 'random',
+    },
     moderator: {
       backend: 'codex',
       model: 'claude-sonnet',
@@ -92,5 +117,58 @@ describe('Config Validation', () => {
     const failResult = checkMinReviewers(validConfig, 5);
     expect(failResult.valid).toBe(false);
     expect(failResult.message).toContain('Insufficient reviewers');
+  });
+
+  it('should require provider when backend is opencode', () => {
+    const invalidConfig = {
+      ...validConfig,
+      reviewers: [
+        {
+          id: 'r1',
+          backend: 'opencode' as const,
+          model: 'kimi-k2.5',
+          enabled: true,
+          timeout: 120,
+          // Missing provider
+        },
+      ],
+    };
+
+    expect(() => validateConfigData(invalidConfig)).toThrow(/provider is required/i);
+  });
+
+  it('should not require provider for non-opencode backends', () => {
+    const configWithoutProvider = {
+      ...validConfig,
+      reviewers: [
+        {
+          id: 'r1',
+          backend: 'codex' as const,
+          model: 'o4-mini',
+          enabled: true,
+          timeout: 120,
+          // No provider needed for codex
+        },
+      ],
+    };
+
+    expect(() => validateConfigData(configWithoutProvider)).not.toThrow();
+  });
+
+  it('should accept claude backend', () => {
+    const configWithClaude = {
+      ...validConfig,
+      reviewers: [
+        {
+          id: 'r1',
+          backend: 'claude' as const,
+          model: 'claude-opus-4',
+          enabled: true,
+          timeout: 120,
+        },
+      ],
+    };
+
+    expect(() => validateConfigData(configWithClaude)).not.toThrow();
   });
 });

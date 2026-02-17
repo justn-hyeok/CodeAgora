@@ -125,11 +125,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
     }
 
     // === L2 MODERATOR: Run Discussions ===
-    const enabledSupporters = getEnabledSupporters(config);
-
     const moderatorReport = await runModerator({
       config: config.moderator,
-      supporterConfigs: enabledSupporters,
+      supporterPoolConfig: config.supporters,
       discussions: deduplicated,
       settings: config.discussion,
       date,

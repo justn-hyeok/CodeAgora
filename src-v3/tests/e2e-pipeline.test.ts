@@ -20,37 +20,53 @@ index 123..456 789
 +const query = \`SELECT * FROM users WHERE username = '\${username}'\`;
 `;
 
+  const mockConfig = {
+    reviewers: [
+      { id: 'r1', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
+      { id: 'r2', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
+      { id: 'r3', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
+    ],
+    supporters: {
+      pool: [
+        { id: 'sp1', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
+        { id: 'sp2', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
+      ],
+      pickCount: 2,
+      pickStrategy: 'random',
+      devilsAdvocate: {
+        id: 's-devil',
+        backend: 'codex',
+        model: 'test',
+        enabled: true,
+        timeout: 120,
+      },
+      personaPool: ['/tmp/test-persona.md'],
+      personaAssignment: 'random',
+    },
+    moderator: { backend: 'codex', model: 'test' },
+    discussion: {
+      maxRounds: 3,
+      registrationThreshold: {
+        HARSHLY_CRITICAL: 1,
+        CRITICAL: 1,
+        WARNING: 2,
+        SUGGESTION: null,
+      },
+      codeSnippetRange: 10,
+    },
+    errorHandling: { maxRetries: 2, forfeitThreshold: 0.7 },
+  };
+
   beforeEach(async () => {
     // Create test diff
     await fs.writeFile(testDiffPath, testDiff, 'utf-8');
 
+    // Create test persona
+    await fs.writeFile('/tmp/test-persona.md', '# Test Persona\nYou are a test reviewer.', 'utf-8');
+
     // Create mock config
     await fs.mkdir('.ca', { recursive: true });
-    await fs.writeFile(
-      '.ca/config.json',
-      JSON.stringify({
-        reviewers: [
-          { id: 'r1', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
-          { id: 'r2', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
-          { id: 'r3', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
-        ],
-        supporters: [
-          { id: 's1', backend: 'codex', model: 'test', role: 'validator', enabled: true },
-        ],
-        moderator: { backend: 'codex', model: 'test' },
-        discussion: {
-          maxRounds: 3,
-          registrationThreshold: {
-            HARSHLY_CRITICAL: 1,
-            CRITICAL: 1,
-            WARNING: 2,
-            SUGGESTION: null,
-          },
-          codeSnippetRange: 10,
-        },
-        errorHandling: { maxRetries: 2, forfeitThreshold: 0.7 },
-      })
-    );
+    await fs.writeFile('.ca/config.json', JSON.stringify(mockConfig));
 
     // Mock backend executor
     vi.spyOn(backend, 'executeBackend').mockResolvedValue(`
@@ -76,6 +92,7 @@ Use prepared statements: db.query('SELECT * FROM users WHERE username = ?', [use
     // Cleanup
     await fs.rm('.ca', { recursive: true, force: true });
     await fs.unlink(testDiffPath).catch(() => {});
+    await fs.unlink('/tmp/test-persona.md').catch(() => {});
     vi.restoreAllMocks();
   });
 
@@ -113,31 +130,7 @@ Use prepared statements: db.query('SELECT * FROM users WHERE username = ?', [use
 
     // Recreate config
     await fs.mkdir('.ca', { recursive: true });
-    await fs.writeFile(
-      '.ca/config.json',
-      JSON.stringify({
-        reviewers: [
-          { id: 'r1', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
-          { id: 'r2', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
-          { id: 'r3', backend: 'codex', model: 'test', enabled: true, timeout: 120 },
-        ],
-        supporters: [
-          { id: 's1', backend: 'codex', model: 'test', role: 'validator', enabled: true },
-        ],
-        moderator: { backend: 'codex', model: 'test' },
-        discussion: {
-          maxRounds: 3,
-          registrationThreshold: {
-            HARSHLY_CRITICAL: 1,
-            CRITICAL: 1,
-            WARNING: 2,
-            SUGGESTION: null,
-          },
-          codeSnippetRange: 10,
-        },
-        errorHandling: { maxRetries: 2, forfeitThreshold: 0.7 },
-      })
-    );
+    await fs.writeFile('.ca/config.json', JSON.stringify(mockConfig));
 
     // Clear previous mocks
     vi.restoreAllMocks();
