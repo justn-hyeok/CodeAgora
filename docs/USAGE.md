@@ -1,4 +1,4 @@
-# Oh My CodeReview - Usage Guide
+# CodeAgora - Usage Guide
 
 Multi-LLM collaborative code review pipeline with debate engine, AI supporters, and Discord integration.
 
@@ -9,25 +9,25 @@ Multi-LLM collaborative code review pipeline with debate engine, AI supporters, 
 pnpm install
 
 # Initialize config
-pnpm oh-my-codereview init
+pnpm codeagora init
 
 # Review changes
-pnpm oh-my-codereview review
+pnpm codeagora review
 
 # Review specific file
-pnpm oh-my-codereview review path/to/file.diff
+pnpm codeagora review path/to/file.diff
 
 # Review git changes
-pnpm oh-my-codereview review --base main
+pnpm codeagora review --base main
 
 # View statistics
-pnpm oh-my-codereview stats
-pnpm oh-my-codereview stats --last 10
+pnpm codeagora stats
+pnpm codeagora stats --last 10
 ```
 
 ## Configuration
 
-Edit `oh-my-codereview.config.json`:
+Edit `codeagora.config.json`:
 
 ```json
 {
@@ -114,7 +114,7 @@ Edit `oh-my-codereview.config.json`:
 ## Architecture
 
 ```
-oh-my-codereview/
+codeagora/
 ├── src/
 │   ├── cli/           # CLI commands (review, init, stats)
 │   ├── config/        # Config loading & validation
@@ -151,7 +151,7 @@ oh-my-codereview/
 - Safe for parallel file processing
 
 ### Storage
-- JSON file-based (~/.oh-my-codereview/history.json)
+- JSON file-based (~/.codeagora/history.json)
 - Rotation (keeps last 1000 entries)
 - Non-blocking saves (won't crash pipeline)
 

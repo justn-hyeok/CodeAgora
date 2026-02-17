@@ -7,7 +7,7 @@ This project uses **OpenCode CLI** as the backend for executing LLM reviews. Ope
 ## Architecture
 
 ```
-oh-my-codereview → OpenCode CLI → LLM Providers (Anthropic, OpenAI, Google, DeepSeek)
+codeagora → OpenCode CLI → LLM Providers (Anthropic, OpenAI, Google, DeepSeek)
 ```
 
 Each reviewer is executed as:
@@ -99,7 +99,7 @@ OpenCode supports the following providers and models (as configured):
 
 ### Backend Selection
 
-In `oh-my-codereview.config.json`:
+In `codeagora.config.json`:
 
 ```json
 {

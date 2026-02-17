@@ -22,7 +22,7 @@ Successfully migrated CodeAgora from v1 (TypeScript CLI) to v2 (Claude Code Skil
 ### 2. Configuration Updates ✅
 
 **Updated `package.json`:**
-- Changed name: `oh-my-codereview` → `codeagora`
+- Changed name: `codeagora` → `codeagora`
 - Version: `0.1.0` → `2.0.0`
 - Removed `main` and `bin` fields (no longer a standalone CLI)
 - Updated all scripts to delegate to `tools/` package
@@ -122,7 +122,7 @@ codeagora/
 
 ### Before (V1)
 ```
-User → oh-my-codereview CLI → src/pipeline/index.ts
+User → codeagora CLI → src/pipeline/index.ts
                             → src/llm/adapter.ts
                             → src/reviewer/executor.ts
                             → OpenCode (hardcoded)

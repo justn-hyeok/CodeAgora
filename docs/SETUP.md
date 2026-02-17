@@ -19,8 +19,8 @@ Complete setup instructions for the CodeAgora multi-agent code review system.
 ```bash
 # Clone repository
 cd ~/Projects
-git clone <your-repo-url> oh-my-codereview
-cd oh-my-codereview
+git clone <your-repo-url> codeagora
+cd codeagora
 
 # Install and build tools package
 cd tools
@@ -187,7 +187,7 @@ Ensure at least `min_reviewers` backends are:
 ## Uninstallation
 
 ```bash
-cd ~/Projects/oh-my-codereview
+cd ~/Projects/codeagora
 
 # Remove tools
 cd tools
@@ -195,7 +195,7 @@ pnpm uninstall
 
 # Remove project
 cd ../..
-rm -rf oh-my-codereview
+rm -rf codeagora
 ```
 
 ## Getting Help

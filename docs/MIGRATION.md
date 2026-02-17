@@ -13,7 +13,7 @@ V2 represents a complete architectural redesign from a standalone TypeScript CLI
 ### V1 Architecture (Deprecated)
 
 ```
-User → oh-my-codereview CLI
+User → codeagora CLI
      → src/pipeline/index.ts (TypeScript orchestration)
      → src/llm/adapter.ts (Single backend: OpenCode only)
      → src/reviewer/executor.ts
@@ -54,8 +54,8 @@ User → /agora review (Claude Code skill)
 
 **V1:**
 ```bash
-npm install -g oh-my-codereview
-oh-my-codereview review --branch main
+npm install -g codeagora
+codeagora review --branch main
 ```
 
 **V2:**
@@ -70,7 +70,7 @@ oh-my-codereview review --branch main
 
 ### 2. Configuration Format
 
-**V1 Config (`oh-my-codereview.config.json`):**
+**V1 Config (`codeagora.config.json`):**
 ```json
 {
   "head_agent": { "provider": "opencode", "model": "..." },
@@ -157,7 +157,7 @@ All `src/` directory files have been removed or archived:
 **V1:**
 ```bash
 # Standalone executable
-oh-my-codereview review
+codeagora review
 ```
 
 **V2:**
@@ -177,7 +177,7 @@ oh-my-codereview review
 
 1. Copy your V1 config:
    ```bash
-   cp oh-my-codereview.config.json oh-my-codereview.config.json.backup
+   cp codeagora.config.json codeagora.config.json.backup
    ```
 
 2. Create new V2 config:
@@ -253,14 +253,14 @@ node dist/index.js --help
 
 **Remove V1 scripts:**
 ```bash
-# Delete any references to oh-my-codereview CLI
-npm uninstall -g oh-my-codereview
+# Delete any references to codeagora CLI
+npm uninstall -g codeagora
 ```
 
 **Update CI/CD:**
 ```yaml
 # Before (V1)
-- run: oh-my-codereview review --branch main
+- run: codeagora review --branch main
 
 # After (V2) - Not applicable
 # CodeAgora V2 is a Claude Code skill, not a CI/CD tool
@@ -438,7 +438,7 @@ If you need to rollback to V1:
 
 2. Restore old config:
    ```bash
-   mv oh-my-codereview.config.json.backup oh-my-codereview.config.json
+   mv codeagora.config.json.backup codeagora.config.json
    ```
 
 3. Reinstall dependencies:

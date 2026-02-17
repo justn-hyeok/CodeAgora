@@ -16,7 +16,7 @@
 
 ### 1-2. Config 시스템 (2일)
 
-- `oh-my-codereview.config.json` 로더 구현
+- `codeagora.config.json` 로더 구현
 - zod 스키마 검증
 - config validation (min_reviewers 체크 등)
 - 기본 config 파일 생성기
@@ -62,7 +62,7 @@
 
 **Phase 1 산출물:**
 
-- CLI 명령어: `npx oh-my-codereview ./path/to/diff` 또는 `npx oh-my-codereview --pr 142`
+- CLI 명령어: `npx codeagora ./path/to/diff` 또는 `npx codeagora --pr 142`
 - 터미널에 Markdown 리포트 출력
 - 로컬에서 완전히 동작하는 파이프라인
 

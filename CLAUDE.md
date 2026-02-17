@@ -1,4 +1,4 @@
-# Oh My CodeReview
+# CodeAgora
 
 ## 프로젝트 개요
 여러 LLM이 협력하여 코드를 심층 리뷰하는 CLI 파이프라인.
@@ -15,7 +15,7 @@
 - 패키지 매니저: pnpm
 
 ## 디렉토리 구조
-oh-my-codereview/
+codeagora/
 ├── src/
 │   ├── cli/...timer.ts
 ├── prompts/                  # 프롬프트 템플릿
@@ -28,7 +28,7 @@ oh-my-codereview/
 │   ├── config/
 │   ├── diff/
 │   └── fixtures/             # 테스트용 샘플 diff, 리뷰 응답
-├── oh-my-codereview.config.json
+├── codeagora.config.json
 ├── .reviewignore
 ├── CLAUDE.md
 ├── package.json

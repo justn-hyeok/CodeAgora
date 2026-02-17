@@ -7,7 +7,7 @@
 ### Step 1: 프로젝트 부트스트랩
 
 ```bash
-mkdir oh-my-codereview && cd oh-my-codereview
+mkdir codeagora && cd codeagora
 pnpm init
 pnpm add typescript zod commander chalk
 pnpm add -D vitest tsup @types/node

@@ -11,7 +11,7 @@ class TestReviewHistoryStorage {
   private writeQueue = Promise.resolve();
 
   constructor(baseDir: string) {
-    this.storageDir = join(baseDir, '.oh-my-codereview');
+    this.storageDir = join(baseDir, '.codeagora');
     this.historyFile = join(this.storageDir, 'history.json');
   }
 
@@ -77,7 +77,7 @@ describe('ReviewHistoryStorage', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `oh-my-codereview-test-${Date.now()}-${Math.random()}`);
+    testDir = join(tmpdir(), `codeagora-test-${Date.now()}-${Math.random()}`);
     await mkdir(testDir, { recursive: true });
     storage = new TestReviewHistoryStorage(testDir);
   });
@@ -253,8 +253,8 @@ describe('ReviewHistoryStorage', () => {
   });
 
   it('should handle corrupted history file gracefully', async () => {
-    const historyFile = join(testDir, '.oh-my-codereview', 'history.json');
-    await mkdir(join(testDir, '.oh-my-codereview'), { recursive: true });
+    const historyFile = join(testDir, '.codeagora', 'history.json');
+    await mkdir(join(testDir, '.codeagora'), { recursive: true });
     await writeFile(historyFile, '{ invalid json }', 'utf-8');
 
     const history = await storage.load();

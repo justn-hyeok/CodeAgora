@@ -57,7 +57,7 @@ CodeAgora orchestrates multiple AI reviewers to independently analyze your code,
 ```bash
 # Clone repository
 git clone <repo-url>
-cd oh-my-codereview
+cd codeagora
 
 # Build tools package
 cd tools
@@ -183,7 +183,7 @@ pnpm build
 ### Project Structure
 
 ```
-oh-my-codereview/
+codeagora/
 ├── .claude/skills/          # Claude Code skill
 │   ├── agora-review.md
 │   └── agora-review.json
