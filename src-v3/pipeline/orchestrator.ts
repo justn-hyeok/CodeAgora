@@ -121,6 +121,10 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
       const snippet = snippets.get(key);
       if (snippet) {
         discussion.codeSnippet = snippet.code;
+      } else {
+        // Log warning and set fallback message
+        logger.warn(`Failed to extract code snippet for ${key}`);
+        discussion.codeSnippet = `[Code snippet not available - file ${discussion.filePath} may not be in diff]`;
       }
     }
 

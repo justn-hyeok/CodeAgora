@@ -366,6 +366,13 @@ ${rounds.map((r, i) => `Round ${i + 1}:\n${r.supporterResponses.map(s => `- ${s.
 // ============================================================================
 
 function buildModeratorPrompt(discussion: Discussion, roundNum: number): string {
+  const snippetSection = discussion.codeSnippet && discussion.codeSnippet.trim()
+    ? `Code snippet:
+\`\`\`
+${discussion.codeSnippet}
+\`\`\``
+    : `Code snippet: (not available - file may not be in diff)`;
+
   return `Round ${roundNum}
 
 Issue: ${discussion.issueTitle}
@@ -374,10 +381,7 @@ Claimed Severity: ${discussion.severity}
 
 Evidence documents: ${discussion.evidenceDocs.length} reviewer(s)
 
-Code snippet:
-\`\`\`
-${discussion.codeSnippet}
-\`\`\`
+${snippetSection}
 
 Evaluate the evidence and provide your verdict.`;
 }

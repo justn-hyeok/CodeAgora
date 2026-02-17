@@ -14,7 +14,10 @@ const EVIDENCE_BLOCK_REGEX = /## Issue:\s*(.+?)\n[\s\S]*?### 문제\n([\s\S]*?)#
 /**
  * Parse reviewer response into evidence documents
  */
-export function parseEvidenceResponse(response: string): EvidenceDocument[] {
+export function parseEvidenceResponse(
+  response: string,
+  diffFilePaths?: string[]
+): EvidenceDocument[] {
   // Check for "no issues" response
   const lowerResponse = response.toLowerCase();
   if (
@@ -39,7 +42,7 @@ export function parseEvidenceResponse(response: string): EvidenceDocument[] {
         .map((line) => line.replace(/^\d+\.\s*/, ''));
 
       const severity = parseSeverity(severityText.trim());
-      const fileInfo = extractFileInfo(problem);
+      const fileInfo = extractFileInfo(problem, diffFilePaths);
 
       documents.push({
         issueTitle: title.trim(),
@@ -78,26 +81,71 @@ function parseSeverity(severityText: string): Severity {
   return 'SUGGESTION';
 }
 
-function extractFileInfo(problemText: string): {
+function extractFileInfo(
+  problemText: string,
+  diffFilePaths?: string[]
+): {
   filePath: string;
   lineRange: [number, number];
 } {
-  // Try to extract file path and line numbers from problem text
-  // Format: "In file.ts:123-456" or "file.ts line 123"
-  const fileMatch = problemText.match(/(?:In\s+)?([a-zA-Z0-9_/.-]+\.[a-z]+)(?::|\s+line\s+)(\d+)(?:-(\d+))?/i);
+  // Try multiple patterns in order of specificity
+  const patterns = [
+    // Primary format: "In file.ts:10-20" or "In file.ts:10"
+    /In\s+([a-zA-Z0-9_/.-]+\.[a-z]+):(\d+)(?:-(\d+))?/i,
 
-  if (fileMatch) {
-    const filePath = fileMatch[1];
-    const lineStart = parseInt(fileMatch[2], 10);
-    const lineEnd = fileMatch[3] ? parseInt(fileMatch[3], 10) : lineStart;
+    // With comma: "In file.ts, line 10" or "In file.ts,10"
+    /In\s+([a-zA-Z0-9_/.-]+\.[a-z]+),?\s*(?:line\s+)?(\d+)(?:-(\d+))?/i,
 
-    return {
-      filePath,
-      lineRange: [lineStart, lineEnd],
-    };
+    // Without "In": "file.ts:10-20" or "file.ts:10"
+    /([a-zA-Z0-9_/.-]+\.[a-z]+):(\d+)(?:-(\d+))?/,
+
+    // Space separated: "file.ts line 10"
+    /([a-zA-Z0-9_/.-]+\.[a-z]+)\s+line\s+(\d+)(?:-(\d+))?/i,
+  ];
+
+  for (const pattern of patterns) {
+    const fileMatch = problemText.match(pattern);
+
+    if (fileMatch) {
+      const filePath = fileMatch[1];
+      const lineStart = parseInt(fileMatch[2], 10);
+      const lineEnd = fileMatch[3] ? parseInt(fileMatch[3], 10) : lineStart;
+
+      return {
+        filePath,
+        lineRange: [lineStart, lineEnd],
+      };
+    }
   }
 
-  // Fallback
+  // Fallback: Try fuzzy matching if diff file paths are provided
+  if (diffFilePaths && diffFilePaths.length > 0) {
+    const { fuzzyMatchFilePath } = require('../utils/diff.js');
+    const matchedPath = fuzzyMatchFilePath(problemText, diffFilePaths);
+
+    if (matchedPath) {
+      console.warn(
+        `[Parser] Used fuzzy matching: "${problemText.substring(0, 50)}..." -> ${matchedPath}`
+      );
+
+      // Try to extract line numbers even if file path failed
+      const lineMatch = problemText.match(/(\d+)(?:-(\d+))?/);
+      const lineStart = lineMatch ? parseInt(lineMatch[1], 10) : 1;
+      const lineEnd = lineMatch && lineMatch[2] ? parseInt(lineMatch[2], 10) : lineStart;
+
+      return {
+        filePath: matchedPath,
+        lineRange: [lineStart, lineEnd],
+      };
+    }
+  }
+
+  // Final fallback: log warning
+  console.warn(
+    '[Parser] Failed to extract file info from problem text:',
+    problemText.substring(0, 100)
+  );
+
   return {
     filePath: 'unknown',
     lineRange: [0, 0],

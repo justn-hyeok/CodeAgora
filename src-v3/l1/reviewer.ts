@@ -7,6 +7,7 @@ import type { ReviewerConfig } from '../types/config.js';
 import type { ReviewOutput, EvidenceDocument } from '../types/core.js';
 import { parseEvidenceResponse } from './parser.js';
 import { executeBackend } from './backend.js';
+import { extractFileListFromDiff } from '../utils/diff.js';
 
 // ============================================================================
 // Reviewer Execution
@@ -30,6 +31,9 @@ export async function executeReviewer(
 
   let lastError: Error | undefined;
 
+  // Extract file list from diff for fallback parsing
+  const diffFilePaths = extractFileListFromDiff(diffContent);
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const response = await executeBackend({
@@ -40,8 +44,8 @@ export async function executeReviewer(
         timeout: config.timeout,
       });
 
-      // Parse response into evidence documents
-      const evidenceDocs = parseEvidenceResponse(response);
+      // Parse response into evidence documents with diff file paths for fallback
+      const evidenceDocs = parseEvidenceResponse(response, diffFilePaths);
 
       return {
         reviewerId: config.id,
@@ -121,7 +125,9 @@ Review the following code changes and identify any issues. For each issue you fi
 ## Issue: [Clear, concise title]
 
 ### 문제
-[What is the problem?]
+In {filePath}:{startLine}-{endLine}
+
+[What is the problem? Describe the issue in detail.]
 
 ### 근거
 1. [Specific evidence 1]
@@ -135,11 +141,43 @@ Review the following code changes and identify any issues. For each issue you fi
 [How to fix it?]
 \`\`\`
 
-**Important:**
+**CRITICAL FORMAT REQUIREMENTS:**
+
+1. **File location (MANDATORY)**: The first line of "### 문제" section MUST follow this exact format:
+   - \`In {filePath}:{startLine}-{endLine}\`
+   - Example: \`In auth.ts:10-15\`
+   - Example: \`In src/components/Login.tsx:42-42\`
+   - Example: \`In utils/validation.js:18-25\`
+
+2. **After the file location**, add a blank line and then describe the problem.
+
+**Severity Levels:**
 - HARSHLY_CRITICAL: Security vulnerabilities, data loss risks, critical bugs that will cause immediate failure
 - CRITICAL: Major bugs, serious performance issues, incorrect logic
 - WARNING: Code quality issues, potential bugs, maintainability concerns
 - SUGGESTION: Style improvements, minor optimizations, best practice recommendations
+
+**Example Evidence Document:**
+
+\`\`\`markdown
+## Issue: SQL Injection Vulnerability
+
+### 문제
+In auth.ts:10-12
+
+The user input is directly concatenated into SQL query without sanitization, creating a SQL injection vulnerability.
+
+### 근거
+1. Username parameter is taken directly from user input
+2. String concatenation is used instead of parameterized queries
+3. No input validation or escaping is performed
+
+### 심각도
+HARSHLY_CRITICAL
+
+### 제안
+Use parameterized queries: \`db.query('SELECT * FROM users WHERE username = ?', [username])\`
+\`\`\`
 
 ## Code Changes
 

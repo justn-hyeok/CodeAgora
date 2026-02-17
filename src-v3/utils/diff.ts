@@ -10,6 +10,57 @@ export interface CodeSnippet {
 }
 
 /**
+ * Extract list of file paths from diff
+ */
+export function extractFileListFromDiff(diffContent: string): string[] {
+  const files: string[] = [];
+  const sections = diffContent.split(/(?=diff --git)/);
+
+  for (const section of sections) {
+    // Match: diff --git a/path/to/file.ts b/path/to/file.ts
+    const match = section.match(/diff --git a\/(.+?) b\//);
+    if (match) {
+      files.push(match[1]);
+    }
+  }
+
+  return files;
+}
+
+/**
+ * Find best matching file path from a list using fuzzy matching
+ */
+export function fuzzyMatchFilePath(
+  query: string,
+  filePaths: string[]
+): string | null {
+  if (filePaths.length === 0) return null;
+
+  // Extract potential filename from query text
+  const filenamePattern = /([a-zA-Z0-9_-]+\.[a-z]+)/gi;
+  const matches = query.match(filenamePattern);
+
+  if (!matches || matches.length === 0) return null;
+
+  // Try exact match first
+  for (const filename of matches) {
+    const exact = filePaths.find((path) => path.endsWith(filename));
+    if (exact) return exact;
+  }
+
+  // Try partial match (filename without extension)
+  for (const filename of matches) {
+    const nameWithoutExt = filename.replace(/\.[^.]+$/, '');
+    const partial = filePaths.find((path) =>
+      path.toLowerCase().includes(nameWithoutExt.toLowerCase())
+    );
+    if (partial) return partial;
+  }
+
+  return null;
+}
+
+/**
  * Extract code snippet from diff with ±N lines context
  */
 export function extractCodeSnippet(
