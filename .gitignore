@@ -60,5 +60,5 @@ reviews/
 
 # CodeAgora runtime
 .codeagora/
-.ca/*
-!.ca/personas/
+.ca/sessions/
+.ca/logs/
