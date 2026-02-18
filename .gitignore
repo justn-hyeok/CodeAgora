@@ -60,4 +60,5 @@ reviews/
 
 # CodeAgora runtime
 .codeagora/
-.ca/
+.ca/*
+!.ca/personas/
