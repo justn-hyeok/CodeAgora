@@ -96,12 +96,13 @@ function buildOpenCodeCommand(
   provider: string | undefined,
   promptFile: string
 ): string {
-  // OpenCode CLI: stdin pipe + model selection
-  // Format: cat prompt.txt | opencode -m provider/model
+  // OpenCode CLI: use 'run' subcommand with model selection
+  // Format: cat prompt.txt | opencode run -m provider/model
+  // Output includes header line, but stdout contains the full response
   if (!provider) {
     throw new Error('OpenCode backend requires provider parameter');
   }
-  return `cat "${promptFile}" | opencode -m ${provider}/${model}`;
+  return `cat "${promptFile}" | opencode run -m ${provider}/${model}`;
 }
 
 function buildCodexCommand(model: string, promptFile: string): string {
