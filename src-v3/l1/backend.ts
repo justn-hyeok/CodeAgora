@@ -96,24 +96,30 @@ function buildOpenCodeCommand(
   provider: string | undefined,
   promptFile: string
 ): string {
-  // OpenCode CLI: cat prompt.txt | opencode run
-  return `cat "${promptFile}" | opencode run`;
+  // OpenCode CLI: stdin pipe + model selection
+  // Format: cat prompt.txt | opencode -m provider/model
+  if (!provider) {
+    throw new Error('OpenCode backend requires provider parameter');
+  }
+  return `cat "${promptFile}" | opencode -m ${provider}/${model}`;
 }
 
 function buildCodexCommand(model: string, promptFile: string): string {
-  // Codex CLI: cat prompt.txt | codex exec
-  return `cat "${promptFile}" | codex exec`;
+  // Codex CLI: stdin pipe with exec command
+  // Format: cat prompt.txt | codex exec -
+  // The '-' tells codex to read from stdin
+  return `cat "${promptFile}" | codex exec -`;
 }
 
 function buildGeminiCommand(model: string, promptFile: string): string {
-  // Gemini CLI: cat prompt.txt | gemini -p "$(cat prompt.txt)"
-  // Note: Gemini -p expects the prompt as argument, so we use command substitution
-  return `gemini -p "$(cat "${promptFile}")"`;
+  // Gemini CLI: -m for model, -p for prompt
+  // Format: gemini -m model -p "$(cat prompt.txt)"
+  return `gemini -m ${model} -p "$(cat "${promptFile}")"`;
 }
 
 function buildClaudeCommand(model: string, promptFile: string): string {
-  // TODO: Verify actual Claude Code CLI invocation syntax
-  // Placeholder implementation - assumes similar pattern to other CLIs
-  // Expected: cat prompt.txt | claude [model] [options]
-  return `cat "${promptFile}" | claude --model ${model}`;
+  // Claude Code: Interactive AI coding agent
+  // For programmatic usage, pipe prompt to stdin
+  // Note: Claude Code is primarily interactive, this is experimental
+  return `cat "${promptFile}" | claude --non-interactive --model ${model}`;
 }
