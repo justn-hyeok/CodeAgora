@@ -82,7 +82,7 @@
 3. [구체적 근거 3]
 
 ### 심각도
-[CRITICAL / WARNING / SUGGESTION / HARSHLY CRITICAL]
+[HARSHLY_CRITICAL / CRITICAL / WARNING / SUGGESTION] (See Severity Guide in reviewer prompt)
 
 ### 제안
 [어떻게 수정하면 되는지]
@@ -150,11 +150,38 @@
 
 ### 4.1 등록 조건
 
+**Severity 판단 기준: Impact × Reversibility 2축 매트릭스**
+
+```
+                   Reversible (git revert fixes)   Irreversible (data lost/leaked)
+High Impact        ┌─────────────────────────┐     ┌─────────────────────────┐
+(prod user harm)   │      CRITICAL           │     │   HARSHLY_CRITICAL      │
+                   │  - API 500              │     │  - Data corruption      │
+                   │  - Memory leak          │     │  - SQL injection        │
+                   │  - Auth broken          │     │  - Secrets in repo      │
+                   └─────────────────────────┘     └─────────────────────────┘
+
+Low Impact         ┌─────────────────────────┐     ┌─────────────────────────┐
+(no direct harm)   │      WARNING            │     │      WARNING            │
+                   │  - Perf degradation     │     │  (rare case)            │
+                   │  - Missing error check  │     │                         │
+                   │  - A11y issues          │     │                         │
+                   └─────────────────────────┘     └─────────────────────────┘
+```
+
+**Q1. Impact**: Does this cause direct harm to production users?
+  - YES → High Impact (CRITICAL or HARSHLY_CRITICAL)
+  - NO → Low Impact (WARNING or SUGGESTION)
+
+**Q2. Reversibility**: Can harm be fully undone by `git revert` + redeploy?
+  - YES → CRITICAL
+  - NO → HARSHLY_CRITICAL
+
 **Discussion 대상: CRITICAL, WARNING만. SUGGESTION은 토론 대상 아님.**
 
 | Severity | 등록 조건 |
 |---|---|
-| HARSHLY CRITICAL | 1명이라도 → 즉시 등록, 중재자 기각 불가, 무조건 헤드행 |
+| HARSHLY_CRITICAL | 1명이라도 → 즉시 등록, 중재자 기각 불가, 무조건 헤드행 |
 | CRITICAL | 1명 + 서포터 1명 동의 시 등록 |
 | WARNING | 2명+ 리뷰어 동의 시 등록 |
 | SUGGESTION | Discussion 미등록 → `suggestions.md`에 수집 |
@@ -197,11 +224,21 @@
 이의 있음 → 라운드 연장
 ```
 
-### 4.5 HARSHLY CRITICAL 안전장치
+### 4.5 HARSHLY_CRITICAL 안전장치
 
-- 중재자 기각 불가
-- 무조건 헤드(opus)까지 올라감
-- 헤드가 최종 판단
+**판단 기준**:
+- Q1 (Impact): 프로덕션 유저에게 직접적 피해? YES
+- Q2 (Reversibility): git revert로 피해 완전 복구 가능? NO
+
+**안전장치**:
+- 중재자 기각 불가 — 1명이라도 HC 지적하면 무조건 헤드까지 올라감
+- 헤드(Claude Code)가 최종 판단 — "실제 HC 맞나?" 재검증
+- **의심 시 CRITICAL 원칙** — 불확실하면 낮은 심각도 선택
+
+**이유**:
+- HC false positive는 비싸다 — 헤드 직행이라 중재자+서포터 리소스 낭비
+- HC false negative는 안전망 있음 — CRITICAL로 내려가도 서포터+중재자가 재검증
+- 따라서 리뷰어는 확실할 때만 HC 선언, 의심스러우면 CRITICAL
 
 ### 4.6 SUGGESTION 처리
 

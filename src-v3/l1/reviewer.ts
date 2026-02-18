@@ -151,11 +151,44 @@ In {filePath}:{startLine}-{endLine}
 
 2. **After the file location**, add a blank line and then describe the problem.
 
-**Severity Levels:**
-- HARSHLY_CRITICAL: Security vulnerabilities, data loss risks, critical bugs that will cause immediate failure
-- CRITICAL: Major bugs, serious performance issues, incorrect logic
-- WARNING: Code quality issues, potential bugs, maintainability concerns
-- SUGGESTION: Style improvements, minor optimizations, best practice recommendations
+## Severity Guide
+
+Decide severity by answering TWO questions:
+
+**Q1. Impact**: Does this cause direct harm to production users?
+  - YES → High Impact (go to Q2)
+  - NO → WARNING or SUGGESTION
+
+**Q2. Reversibility**: Can the harm be fully undone by \`git revert\` + redeploy?
+  - YES → CRITICAL
+  - NO → HARSHLY_CRITICAL
+
+### HARSHLY_CRITICAL = High Impact + Irreversible
+Examples:
+- Data loss/corruption (wrong DELETE, broken migration with no rollback)
+- Security breach (SQL injection, credential exposure, auth bypass)
+- Data already leaked (secrets pushed to public repo)
+
+### CRITICAL = High Impact + Reversible
+Examples:
+- API returns 500 (revert fixes it)
+- Memory leak causing OOM (restart fixes it)
+- Broken authentication flow (revert restores it)
+
+### WARNING = Low Impact
+Examples:
+- Performance degradation (not a crash)
+- Missing error handling (edge case)
+- Accessibility issues
+
+### SUGGESTION = Not a bug
+Examples:
+- Code style, naming conventions
+- Refactoring opportunities
+- Better abstractions
+
+⚠️ **When uncertain between CRITICAL and HARSHLY_CRITICAL, choose CRITICAL.**
+Default to the lower severity — false HC escalation wastes resources.
 
 **Example Evidence Document:**
 
@@ -173,7 +206,7 @@ The user input is directly concatenated into SQL query without sanitization, cre
 3. No input validation or escaping is performed
 
 ### 심각도
-HARSHLY_CRITICAL
+HARSHLY_CRITICAL (See Severity Guide above)
 
 ### 제안
 Use parameterized queries: \`db.query('SELECT * FROM users WHERE username = ?', [username])\`
