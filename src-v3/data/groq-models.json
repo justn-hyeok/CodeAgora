@@ -1,0 +1,17 @@
+{
+  "source": "groq",
+  "models": [
+    { "model_id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B", "context": "128k" },
+    { "model_id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B", "context": "128k" },
+    { "model_id": "llama-guard-3-8b", "name": "Llama Guard 3 8B", "context": "8k" },
+    { "model_id": "meta-llama/llama-4-scout-17b-16e-instruct", "name": "Llama 4 Scout 17B", "context": "512k" },
+    { "model_id": "meta-llama/llama-4-maverick-17b-128e-instruct", "name": "Llama 4 Maverick 17B", "context": "128k" },
+    { "model_id": "gemma2-9b-it", "name": "Gemma 2 9B", "context": "8k" },
+    { "model_id": "mistral-saba-24b", "name": "Mistral Saba 24B", "context": "32k" },
+    { "model_id": "qwen-qwq-32b", "name": "QwQ 32B", "context": "128k" },
+    { "model_id": "deepseek-r1-distill-llama-70b", "name": "DeepSeek R1 Distill Llama 70B", "context": "128k" },
+    { "model_id": "qwen-2.5-coder-32b-instruct", "name": "Qwen 2.5 Coder 32B", "context": "128k" },
+    { "model_id": "qwen-2.5-32b-instruct", "name": "Qwen 2.5 32B", "context": "128k" },
+    { "model_id": "allam-2-7b", "name": "ALLaM 2 7B", "context": "4k" }
+  ]
+}

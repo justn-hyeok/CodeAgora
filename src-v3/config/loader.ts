@@ -3,7 +3,7 @@
  * Load and validate .ca/config.json
  */
 
-import { Config, validateConfig } from '../types/config.js';
+import { Config, validateConfig, type AgentConfig, type ReviewerEntry } from '../types/config.js';
 import { readJson, getConfigPath } from '../utils/fs.js';
 
 // ============================================================================
@@ -34,9 +34,26 @@ export function validateConfigData(data: unknown): Config {
 }
 
 /**
- * Get enabled reviewers
+ * Check if a reviewer entry is a static (non-auto) reviewer.
  */
-export function getEnabledReviewers(config: Config) {
+function isStaticReviewer(entry: ReviewerEntry): entry is AgentConfig {
+  return !('auto' in entry && entry.auto === true);
+}
+
+/**
+ * Get enabled static reviewers (excludes auto: true reviewers).
+ * Auto reviewers are resolved by L0 in resolveReviewers().
+ */
+export function getEnabledReviewers(config: Config): AgentConfig[] {
+  return config.reviewers.filter(
+    (r): r is AgentConfig => isStaticReviewer(r) && r.enabled
+  );
+}
+
+/**
+ * Get all enabled reviewer entries (including auto).
+ */
+export function getEnabledReviewerEntries(config: Config): ReviewerEntry[] {
   return config.reviewers.filter((r) => r.enabled);
 }
 

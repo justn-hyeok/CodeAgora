@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { ModelRouterConfigSchema } from './l0.js';
 
 // ============================================================================
 // Backend Types
@@ -42,6 +43,29 @@ export const AgentConfigSchema = z
     }
   );
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;
+
+// ============================================================================
+// Legacy Schemas (for backward compatibility during migration)
+// ============================================================================
+
+// ============================================================================
+// Auto Reviewer Config (L0 dynamically assigns model)
+// ============================================================================
+
+export const AutoReviewerConfigSchema = z.object({
+  id: z.string(),
+  auto: z.literal(true),
+  label: z.string().optional(),
+  persona: z.string().optional(),
+  enabled: z.boolean().default(true),
+});
+export type AutoReviewerConfig = z.infer<typeof AutoReviewerConfigSchema>;
+
+export const ReviewerEntrySchema = z.union([
+  AgentConfigSchema,
+  AutoReviewerConfigSchema,
+]);
+export type ReviewerEntry = z.infer<typeof ReviewerEntrySchema>;
 
 // ============================================================================
 // Legacy Schemas (for backward compatibility during migration)
@@ -104,11 +128,12 @@ export type ErrorHandling = z.infer<typeof ErrorHandlingSchema>;
 // ============================================================================
 
 export const ConfigSchema = z.object({
-  reviewers: z.array(AgentConfigSchema).min(1),
+  reviewers: z.array(ReviewerEntrySchema).min(1),
   supporters: SupporterPoolConfigSchema,
   moderator: ModeratorConfigSchema,
   discussion: DiscussionSettingsSchema,
   errorHandling: ErrorHandlingSchema,
+  modelRouter: ModelRouterConfigSchema.optional(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 

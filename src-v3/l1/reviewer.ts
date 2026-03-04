@@ -18,6 +18,11 @@ export interface ReviewerInput {
   groupName: string;
   diffContent: string;
   prSummary: string;
+  selectionMeta?: {
+    selectionReason: string;
+    family: string;
+    isReasoning: boolean;
+  };
 }
 
 /**
