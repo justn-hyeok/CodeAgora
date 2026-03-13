@@ -5,28 +5,31 @@
 
 import { Octokit } from '@octokit/rest';
 import type { GitHubConfig, PullRequestInfo } from './client.js';
+import { createOctokit } from './client.js';
 
 /**
  * Fetch a pull request's metadata and unified diff.
  *
  * Uses the `diff` media type to retrieve the raw unified diff as a string.
  * Returns a PullRequestInfo containing title, branches, and diff text.
+ * Accepts an optional Octokit instance for connection reuse.
  */
 export async function fetchPrDiff(
   config: GitHubConfig,
-  prNumber: number
+  prNumber: number,
+  octokit?: Octokit
 ): Promise<PullRequestInfo> {
-  const octokit = new Octokit({ auth: config.token });
+  const kit = octokit ?? createOctokit(config);
 
   // Fetch PR metadata (JSON)
-  const { data: pr } = await octokit.pulls.get({
+  const { data: pr } = await kit.pulls.get({
     owner: config.owner,
     repo: config.repo,
     pull_number: prNumber,
   });
 
   // Fetch raw diff using the diff media type
-  const diffResponse = await octokit.pulls.get({
+  const diffResponse = await kit.pulls.get({
     owner: config.owner,
     repo: config.repo,
     pull_number: prNumber,

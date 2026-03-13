@@ -3,6 +3,15 @@
  * Pure functions for parsing GitHub URLs and creating config objects.
  */
 
+import { Octokit } from '@octokit/rest';
+
+/**
+ * Create a reusable Octokit instance from a GitHubConfig.
+ */
+export function createOctokit(config: GitHubConfig): Octokit {
+  return new Octokit({ auth: config.token });
+}
+
 export interface GitHubConfig {
   token: string;
   owner: string;

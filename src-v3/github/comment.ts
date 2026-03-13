@@ -5,19 +5,22 @@
 
 import { Octokit } from '@octokit/rest';
 import type { GitHubConfig } from './client.js';
+import { createOctokit } from './client.js';
 
 /**
  * Post a new comment on a pull request.
  * Returns the created comment's id and html_url.
+ * Accepts an optional Octokit instance for connection reuse.
  */
 export async function postPrComment(
   config: GitHubConfig,
   prNumber: number,
-  body: string
+  body: string,
+  octokit?: Octokit
 ): Promise<{ id: number; url: string }> {
-  const octokit = new Octokit({ auth: config.token });
+  const kit = octokit ?? createOctokit(config);
 
-  const { data } = await octokit.issues.createComment({
+  const { data } = await kit.issues.createComment({
     owner: config.owner,
     repo: config.repo,
     issue_number: prNumber,
@@ -30,16 +33,18 @@ export async function postPrComment(
 /**
  * Find an existing comment on a pull request whose body contains the given marker string.
  * Returns the comment id if found, or null if no matching comment exists.
+ * Accepts an optional Octokit instance for connection reuse.
  */
 export async function findExistingComment(
   config: GitHubConfig,
   prNumber: number,
-  marker: string
+  marker: string,
+  octokit?: Octokit
 ): Promise<{ id: number } | null> {
-  const octokit = new Octokit({ auth: config.token });
+  const kit = octokit ?? createOctokit(config);
 
   // Paginate through all comments to find a match
-  const comments = await octokit.paginate(octokit.issues.listComments, {
+  const comments = await kit.paginate(kit.issues.listComments, {
     owner: config.owner,
     repo: config.repo,
     issue_number: prNumber,
@@ -52,15 +57,17 @@ export async function findExistingComment(
 
 /**
  * Update an existing PR comment by id.
+ * Accepts an optional Octokit instance for connection reuse.
  */
 export async function updatePrComment(
   config: GitHubConfig,
   commentId: number,
-  body: string
+  body: string,
+  octokit?: Octokit
 ): Promise<void> {
-  const octokit = new Octokit({ auth: config.token });
+  const kit = octokit ?? createOctokit(config);
 
-  await octokit.issues.updateComment({
+  await kit.issues.updateComment({
     owner: config.owner,
     repo: config.repo,
     comment_id: commentId,

@@ -21,6 +21,7 @@
     "@openrouter/ai-sdk-provider": "^2.2.3",
     "ai": "^6.0.111",
     "commander": "^14.0.3",
+    "yaml": "^2.8.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {

@@ -8,6 +8,7 @@ import path from 'path';
 import { getSupportedProviders } from '../../l1/provider-registry.js';
 import { loadConfigFrom } from '../../config/loader.js';
 import { strictValidateConfig } from '../../config/validator.js';
+import { getProviderEnvVar } from '../../providers/env-vars.js';
 
 // ============================================================================
 // Types
@@ -155,23 +156,8 @@ export async function runDoctor(baseDir: string): Promise<DoctorResult> {
   return { checks, summary };
 }
 
-/**
- * Derive the expected API key environment variable name for a provider.
- * Mirrors the convention in PROVIDER_FACTORIES in provider-registry.ts.
- */
-export function getProviderEnvVar(provider: string): string {
-  const MAP: Record<string, string> = {
-    'nvidia-nim': 'NVIDIA_API_KEY',
-    groq: 'GROQ_API_KEY',
-    openrouter: 'OPENROUTER_API_KEY',
-    google: 'GOOGLE_API_KEY',
-    mistral: 'MISTRAL_API_KEY',
-    cerebras: 'CEREBRAS_API_KEY',
-    together: 'TOGETHER_API_KEY',
-    xai: 'XAI_API_KEY',
-  };
-  return MAP[provider] ?? `${provider.toUpperCase().replace(/-/g, '_')}_API_KEY`;
-}
+// getProviderEnvVar is re-exported for backward compatibility
+export { getProviderEnvVar } from '../../providers/env-vars.js';
 
 export function formatDoctorReport(result: DoctorResult): string {
   const lines: string[] = [];

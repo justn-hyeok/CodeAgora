@@ -12,6 +12,10 @@ import fs from 'fs/promises';
 import { runInit } from './commands/init.js';
 import { runDoctor, formatDoctorReport } from './commands/doctor.js';
 import { listProviders, formatProviderList } from './commands/providers.js';
+import {
+  listSessions, showSession, diffSessions,
+  formatSessionList, formatSessionDetail, formatSessionDiff,
+} from './commands/sessions.js';
 import { formatOutput, type OutputFormat } from './formatters/review-output.js';
 import { parseReviewerOption, readStdin } from './options/review-options.js';
 
@@ -63,12 +67,13 @@ program
 
       // Handle stdin
       let resolvedPath: string;
+      let stdinTmpPath: string | undefined;
       if (diffPath === '-' || (!diffPath && !process.stdin.isTTY)) {
         const stdinContent = await readStdin();
-        const tmpPath = path.join(process.cwd(), '.ca', 'tmp-stdin-diff.patch');
-        await fs.mkdir(path.dirname(tmpPath), { recursive: true });
-        await fs.writeFile(tmpPath, stdinContent);
-        resolvedPath = tmpPath;
+        stdinTmpPath = path.join(process.cwd(), '.ca', `tmp-stdin-${Date.now()}.patch`);
+        await fs.mkdir(path.dirname(stdinTmpPath), { recursive: true });
+        await fs.writeFile(stdinTmpPath, stdinContent);
+        resolvedPath = stdinTmpPath;
       } else if (diffPath) {
         resolvedPath = path.resolve(diffPath);
       } else {
@@ -121,11 +126,14 @@ program
         console.log('---');
       }
 
-      // Note: pipeline currently only uses diffPath; other options will be wired
-      // as the orchestrator evolves to accept them.
-      const result = await runPipeline({ diffPath: resolvedPath });
+      const result = await runPipeline(pipelineOptions);
 
       console.log(formatOutput(result, outputFormat));
+
+      // Clean up stdin temp file if created
+      if (stdinTmpPath) {
+        try { await fs.unlink(stdinTmpPath); } catch { /* ignore */ }
+      }
 
       if (result.status !== 'success') {
         process.exit(1);
@@ -199,6 +207,50 @@ program
   .action(() => {
     const providers = listProviders();
     console.log(formatProviderList(providers));
+  });
+
+const sessionsCmd = program
+  .command('sessions')
+  .description('List, show, or diff past review sessions');
+
+sessionsCmd
+  .command('list')
+  .description('List recent review sessions')
+  .option('--limit <n>', 'Maximum sessions to show', parseInt)
+  .action(async (opts: { limit?: number }) => {
+    try {
+      const sessions = await listSessions(process.cwd(), { limit: opts.limit });
+      console.log(formatSessionList(sessions));
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+sessionsCmd
+  .command('show <session>')
+  .description('Show details for a session (e.g. 2026-03-13/001)')
+  .action(async (session: string) => {
+    try {
+      const detail = await showSession(process.cwd(), session);
+      console.log(formatSessionDetail(detail));
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+sessionsCmd
+  .command('diff <session1> <session2>')
+  .description('Compare issues between two sessions')
+  .action(async (session1: string, session2: string) => {
+    try {
+      const diff = await diffSessions(process.cwd(), session1, session2);
+      console.log(formatSessionDiff(diff));
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
   });
 
 // Only parse argv when this file is the direct entry point (not imported by tests).

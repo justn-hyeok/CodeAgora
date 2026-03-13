@@ -12,6 +12,7 @@ import {
   isDeclarativeReviewers,
   expandDeclarativeReviewers,
 } from '../config/loader.js';
+import { PROVIDER_ENV_VARS } from '../providers/env-vars.js';
 
 export type { TokenUsage };
 
@@ -48,20 +49,7 @@ export interface DryRunResult {
   warnings: string[];
 }
 
-// ============================================================================
-// Provider → env var mapping (mirrors provider-registry.ts)
-// ============================================================================
-
-const PROVIDER_ENV_VARS: Record<string, string> = {
-  'nvidia-nim': 'NVIDIA_API_KEY',
-  groq: 'GROQ_API_KEY',
-  openrouter: 'OPENROUTER_API_KEY',
-  google: 'GOOGLE_API_KEY',
-  mistral: 'MISTRAL_API_KEY',
-  cerebras: 'CEREBRAS_API_KEY',
-  together: 'TOGETHER_API_KEY',
-  xai: 'XAI_API_KEY',
-};
+// PROVIDER_ENV_VARS imported from providers/env-vars.ts (single source of truth)
 
 // ============================================================================
 // Token Estimation

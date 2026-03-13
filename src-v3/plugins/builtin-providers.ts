@@ -3,7 +3,10 @@
  * Wraps the 8 hardcoded providers from l1/provider-registry as ProviderPlugin instances.
  */
 
+import { createRequire } from 'node:module';
 import type { ProviderPlugin } from './types.js';
+
+const require = createRequire(import.meta.url);
 
 // ============================================================================
 // Factory Helper
@@ -33,18 +36,16 @@ export function createBuiltinProviderPlugin(
 
 /**
  * Returns all 8 builtin provider plugins.
- * Factory functions use dynamic imports to avoid hard dependencies at module load time.
+ * Factory functions use createRequire for ESM-safe synchronous imports.
  */
 export function getBuiltinProviderPlugins(): ProviderPlugin[] {
   return [
     createBuiltinProviderPlugin('groq', 'GROQ_API_KEY', (apiKey: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { createGroq } = require('@ai-sdk/groq');
       return createGroq({ apiKey });
     }),
 
     createBuiltinProviderPlugin('nvidia-nim', 'NVIDIA_API_KEY', (apiKey: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { createOpenAICompatible } = require('@ai-sdk/openai-compatible');
       return createOpenAICompatible({
         name: 'nvidia-nim',
@@ -54,19 +55,16 @@ export function getBuiltinProviderPlugins(): ProviderPlugin[] {
     }),
 
     createBuiltinProviderPlugin('openrouter', 'OPENROUTER_API_KEY', (apiKey: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { createOpenRouter } = require('@openrouter/ai-sdk-provider');
       return createOpenRouter({ apiKey });
     }),
 
     createBuiltinProviderPlugin('google', 'GOOGLE_API_KEY', (apiKey: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { createGoogleGenerativeAI } = require('@ai-sdk/google');
       return createGoogleGenerativeAI({ apiKey });
     }),
 
     createBuiltinProviderPlugin('mistral', 'MISTRAL_API_KEY', (apiKey: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { createOpenAICompatible } = require('@ai-sdk/openai-compatible');
       return createOpenAICompatible({
         name: 'mistral',
@@ -76,7 +74,6 @@ export function getBuiltinProviderPlugins(): ProviderPlugin[] {
     }),
 
     createBuiltinProviderPlugin('cerebras', 'CEREBRAS_API_KEY', (apiKey: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { createOpenAICompatible } = require('@ai-sdk/openai-compatible');
       return createOpenAICompatible({
         name: 'cerebras',
@@ -86,7 +83,6 @@ export function getBuiltinProviderPlugins(): ProviderPlugin[] {
     }),
 
     createBuiltinProviderPlugin('together', 'TOGETHER_API_KEY', (apiKey: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { createOpenAICompatible } = require('@ai-sdk/openai-compatible');
       return createOpenAICompatible({
         name: 'together',
@@ -96,7 +92,6 @@ export function getBuiltinProviderPlugins(): ProviderPlugin[] {
     }),
 
     createBuiltinProviderPlugin('xai', 'XAI_API_KEY', (apiKey: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { createOpenAICompatible } = require('@ai-sdk/openai-compatible');
       return createOpenAICompatible({
         name: 'xai',
