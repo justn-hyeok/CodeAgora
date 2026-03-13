@@ -1,0 +1,114 @@
+/**
+ * Review CLI Options
+ * Parses and validates CLI options for the review command.
+ */
+
+import type { OutputFormat } from '../formatters/review-output.js';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface ReviewCliOptions {
+  dryRun: boolean;
+  output: OutputFormat;
+  provider?: string;
+  model?: string;
+  verbose: boolean;
+  reviewers?: string;
+  timeout?: number;
+  reviewerTimeout?: number;
+  noDiscussion: boolean;
+}
+
+export interface ReviewerSelection {
+  count?: number;
+  names?: string[];
+}
+
+// ============================================================================
+// parseReviewerOption
+// ============================================================================
+
+/**
+ * Parse the --reviewers option value.
+ *
+ * "3"                     -> { count: 3 }
+ * "r1-kimi,r2-deepseek"   -> { names: ['r1-kimi', 'r2-deepseek'] }
+ *
+ * Throws for invalid input.
+ */
+export function parseReviewerOption(value: string): ReviewerSelection {
+  const trimmed = value.trim();
+  if (trimmed === '') {
+    throw new Error('--reviewers value cannot be empty');
+  }
+
+  // Pure numeric → count
+  if (/^\d+$/.test(trimmed)) {
+    const count = parseInt(trimmed, 10);
+    if (count < 1) {
+      throw new Error(`--reviewers count must be >= 1, got ${count}`);
+    }
+    return { count };
+  }
+
+  // Comma-separated names
+  if (trimmed.includes(',') || /^[a-zA-Z]/.test(trimmed)) {
+    const names = trimmed
+      .split(',')
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0);
+
+    if (names.length === 0) {
+      throw new Error('--reviewers names list is empty after parsing');
+    }
+
+    // Validate: names must not be purely numeric
+    for (const name of names) {
+      if (/^\d+$/.test(name)) {
+        throw new Error(
+          `--reviewers contains numeric entry "${name}" in a names list — use a plain number for count`
+        );
+      }
+    }
+
+    return { names };
+  }
+
+  throw new Error(
+    `--reviewers value "${value}" is not a valid reviewer count or comma-separated name list`
+  );
+}
+
+// ============================================================================
+// stdin helpers
+// ============================================================================
+
+/**
+ * Returns true when stdin is being piped (not an interactive TTY).
+ */
+export function isStdinPiped(): boolean {
+  return process.stdin.isTTY === undefined || process.stdin.isTTY === false;
+}
+
+/**
+ * Read all data from process.stdin (supports pipe).
+ */
+export async function readStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+
+    process.stdin.on('data', (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+
+    process.stdin.on('end', () => {
+      resolve(Buffer.concat(chunks).toString('utf-8'));
+    });
+
+    process.stdin.on('error', (err: Error) => {
+      reject(err);
+    });
+  });
+}
