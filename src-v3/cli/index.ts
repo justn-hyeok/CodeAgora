@@ -345,6 +345,14 @@ sessionsCmd
     }
   });
 
+program
+  .command('tui')
+  .description('Launch interactive TUI mode')
+  .action(async () => {
+    const { startTui } = await import('../tui/index.js');
+    startTui();
+  });
+
 // Only parse argv when this file is the direct entry point (not imported by tests).
 // In ESM the canonical check is comparing import.meta.url to the process entry module.
 // A simpler cross-env guard: skip parse when NODE_ENV is 'test' and argv hasn't been
