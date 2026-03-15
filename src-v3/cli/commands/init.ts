@@ -33,9 +33,11 @@ export interface CustomConfigParams {
   discussion: boolean;
 }
 
+interface AgentEntry { id: string; label?: string; model: string; backend: string; provider: string; enabled: boolean; timeout: number }
+
 export interface GeneratedConfig {
-  reviewers: Array<{ id: string; model: string; backend: string; provider: string; enabled: boolean; timeout: number }>;
-  supporters: { pool: any[]; pickCount: number; pickStrategy: string; devilsAdvocate: any; personaPool: string[]; personaAssignment: string };
+  reviewers: AgentEntry[];
+  supporters: { pool: AgentEntry[]; pickCount: number; pickStrategy: string; devilsAdvocate: AgentEntry; personaPool: string[]; personaAssignment: string };
   moderator: { model: string; backend: string; provider: string };
   discussion: { maxRounds: number; registrationThreshold: Record<string, number | null>; codeSnippetRange: number };
   errorHandling: { maxRetries: number; forfeitThreshold: number };
