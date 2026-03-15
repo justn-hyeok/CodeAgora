@@ -6,9 +6,17 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/justn-hyeok/CodeAgora"
+    "url": "git+https://github.com/justn-hyeok/CodeAgora.git"
   },
-  "keywords": ["code-review", "llm", "multi-agent", "cli", "tui", "ai", "static-analysis"],
+  "keywords": [
+    "code-review",
+    "llm",
+    "multi-agent",
+    "cli",
+    "tui",
+    "ai",
+    "static-analysis"
+  ],
   "files": [
     "src/dist/**/*.js",
     "src/dist/**/*.d.ts",
