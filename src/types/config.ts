@@ -165,6 +165,13 @@ export type ReviewersField = z.infer<typeof ReviewersFieldSchema>;
 // Full Config Schema
 // ============================================================================
 
+export const NotificationsConfigSchema = z.object({
+  discord: z.object({ webhookUrl: z.string().url() }).optional(),
+  slack: z.object({ webhookUrl: z.string().url() }).optional(),
+  autoNotify: z.boolean().optional(),
+});
+export type NotificationsConfig = z.infer<typeof NotificationsConfigSchema>;
+
 export const ConfigSchema = z.object({
   reviewers: ReviewersFieldSchema,
   supporters: SupporterPoolConfigSchema,
@@ -172,6 +179,7 @@ export const ConfigSchema = z.object({
   discussion: DiscussionSettingsSchema,
   errorHandling: ErrorHandlingSchema,
   modelRouter: ModelRouterConfigSchema.optional(),
+  notifications: NotificationsConfigSchema.optional(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 

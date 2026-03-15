@@ -19,6 +19,7 @@ import {
 import { formatOutput, type OutputFormat } from './formatters/review-output.js';
 import { parseReviewerOption, readStdin } from './options/review-options.js';
 import { formatError, classifyError } from './utils/errors.js';
+import { sendNotifications, type NotificationPayload } from '../notifications/webhook.js';
 import ora from 'ora';
 import { ProgressEmitter } from '../pipeline/progress.js';
 
@@ -54,6 +55,7 @@ program
   .option('--reviewer-timeout <seconds>', 'Per-reviewer timeout in seconds', parseInt)
   .option('--no-discussion', 'Skip L2 discussion phase')
   .option('--quiet', 'Suppress progress output', false)
+  .option('--notify', 'send notification after review', false)
   .action(async (diffPath: string | undefined, options: {
     dryRun?: boolean;
     output: string;
@@ -65,6 +67,7 @@ program
     reviewerTimeout?: number;
     discussion: boolean;
     quiet: boolean;
+    notify: boolean;
   }) => {
     try {
       if (options.quiet && options.verbose) {
@@ -177,6 +180,31 @@ program
       spinner?.stop();
 
       console.log(formatOutput(result, outputFormat));
+
+      // Send notifications if requested and pipeline succeeded with a summary
+      if (result.status === 'success' && result.summary) {
+        const config = await loadConfig().catch(() => null);
+        const shouldNotify = options.notify || config?.notifications?.autoNotify === true;
+        if (shouldNotify && config?.notifications) {
+          const s = result.summary;
+          const payload: NotificationPayload = {
+            decision: s.decision,
+            reasoning: s.reasoning,
+            severityCounts: s.severityCounts,
+            topIssues: s.topIssues.map((i) => ({
+              severity: i.severity,
+              filePath: i.filePath,
+              title: i.title,
+            })),
+            sessionId: result.sessionId,
+            date: result.date,
+            totalDiscussions: s.totalDiscussions,
+            resolved: s.resolved,
+            escalated: s.escalated,
+          };
+          await sendNotifications(config.notifications, payload);
+        }
+      }
 
       // Clean up stdin temp file if created
       if (stdinTmpPath) {
@@ -362,6 +390,61 @@ sessionsCmd
       console.log(formatSessionDiff(diff));
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('notify <session-id>')
+  .description('Send notification for a past review session (format: YYYY-MM-DD/NNN)')
+  .action(async (sessionId: string) => {
+    try {
+      const config = await loadConfig();
+      if (!config.notifications) {
+        console.error('No notifications configured in .ca/config.json');
+        process.exit(1);
+      }
+
+      // Parse "YYYY-MM-DD/NNN" format
+      const parts = sessionId.split('/');
+      if (parts.length !== 2) {
+        console.error('Session ID must be in format YYYY-MM-DD/NNN');
+        process.exit(1);
+      }
+      const [date, id] = parts;
+      const sessionDir = path.join(process.cwd(), '.ca', 'sessions', date!, id!);
+
+      // Load verdict
+      let verdictRaw: Record<string, unknown> | null = null;
+      try {
+        const raw = await fs.readFile(path.join(sessionDir, 'head-verdict.json'), 'utf-8');
+        verdictRaw = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        console.error(`Session not found: ${sessionId}`);
+        process.exit(1);
+      }
+
+      const decision = String(verdictRaw['decision'] ?? 'NEEDS_HUMAN');
+      const reasoning = String(verdictRaw['reasoning'] ?? '');
+      const severityCounts = (verdictRaw['severityCounts'] as Record<string, number>) ?? {};
+      const topIssues = (verdictRaw['topIssues'] as Array<{ severity: string; filePath: string; title: string }>) ?? [];
+
+      const payload: NotificationPayload = {
+        decision,
+        reasoning,
+        severityCounts,
+        topIssues,
+        sessionId: id!,
+        date: date!,
+        totalDiscussions: Number(verdictRaw['totalDiscussions'] ?? 0),
+        resolved: Number(verdictRaw['resolved'] ?? 0),
+        escalated: Number(verdictRaw['escalated'] ?? 0),
+      };
+
+      await sendNotifications(config.notifications, payload);
+      console.log(`Notification sent for session ${sessionId}`);
+    } catch (error) {
+      console.error('Notify failed:', error instanceof Error ? error.message : error);
       process.exit(1);
     }
   });
