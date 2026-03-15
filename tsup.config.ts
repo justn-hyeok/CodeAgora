@@ -1,13 +1,11 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/cli/index.ts'],
+  entry: ['src/index.ts', 'src/cli/index.ts'],
+  outDir: 'src/dist',
   format: ['esm'],
   dts: true,
-  clean: true,
+  splitting: false,
   sourcemap: true,
-  minify: false,
-  target: 'node20',
-  outDir: 'dist',
-  external: ['node-fetch'],
+  clean: true,
 });
