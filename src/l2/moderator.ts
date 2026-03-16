@@ -134,6 +134,8 @@ export async function runModerator(input: ModeratorInput): Promise<ModeratorRepo
     const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason);
     return {
       discussionId: discussions[i].id,
+      filePath: discussions[i].filePath,
+      lineRange: discussions[i].lineRange,
       finalSeverity: 'DISMISSED' as const,
       reasoning: `Discussion failed: ${errorMessage}`,
       consensusReached: false,
@@ -171,6 +173,8 @@ async function runDiscussion(
   if (discussion.severity === 'HARSHLY_CRITICAL') {
     const verdict: DiscussionVerdict = {
       discussionId: discussion.id,
+      filePath: discussion.filePath,
+      lineRange: discussion.lineRange,
       finalSeverity: 'HARSHLY_CRITICAL',
       reasoning: 'HARSHLY_CRITICAL issues are escalated to Head without discussion',
       consensusReached: false, // Escalated
@@ -243,6 +247,8 @@ async function runDiscussion(
 
       const verdict: DiscussionVerdict = {
         discussionId: discussion.id,
+        filePath: discussion.filePath,
+        lineRange: discussion.lineRange,
         finalSeverity: consensus.severity!,
         reasoning: consensus.reasoning!,
         consensusReached: true,
@@ -265,6 +271,8 @@ async function runDiscussion(
 
   const verdict: DiscussionVerdict = {
     discussionId: discussion.id,
+    filePath: discussion.filePath,
+    lineRange: discussion.lineRange,
     finalSeverity: finalVerdict.severity,
     reasoning: finalVerdict.reasoning,
     consensusReached: false,

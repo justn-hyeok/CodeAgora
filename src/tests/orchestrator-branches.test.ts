@@ -258,7 +258,7 @@ describe('Orchestrator Branches', () => {
     // runModerator returns a fresh report object each call
     (runModerator as Mock).mockResolvedValue({
       discussions: [
-        { discussionId: 'd001', finalSeverity: 'WARNING', reasoning: 'test', consensusReached: true, rounds: 1 },
+        { discussionId: 'd001', filePath: 'src/test.ts', lineRange: [1, 5] as [number, number], finalSeverity: 'WARNING', reasoning: 'test', consensusReached: true, rounds: 1 },
       ],
       unconfirmedIssues: [],
       suggestions: [],

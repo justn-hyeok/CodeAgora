@@ -92,6 +92,8 @@ export interface DiscussionRound {
 
 export interface DiscussionVerdict {
   discussionId: string;
+  filePath: string;
+  lineRange: [number, number];
   finalSeverity: Severity | 'DISMISSED';
   reasoning: string;
   consensusReached: boolean;

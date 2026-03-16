@@ -21,7 +21,9 @@ const makeDoc = (overrides?: Partial<EvidenceDocument>): EvidenceDocument => ({
 });
 
 const makeDiscussion = (overrides?: Partial<DiscussionVerdict>): DiscussionVerdict => ({
-  discussionId: 'd001-src/db/queries.ts',
+  discussionId: 'd001',
+  filePath: 'src/db/queries.ts',
+  lineRange: [42, 45] as [number, number],
   finalSeverity: 'CRITICAL',
   reasoning: 'Confirmed exploitable',
   consensusReached: true,
@@ -55,7 +57,7 @@ describe('mapToInlineCommentBody', () => {
   it('includes discussion summary when provided', () => {
     const body = mapToInlineCommentBody(makeDoc(), makeDiscussion());
     expect(body).toContain('<details>');
-    expect(body).toContain('d001-src/db/queries.ts');
+    expect(body).toContain('d001');
     expect(body).toContain('consensus reached');
   });
 

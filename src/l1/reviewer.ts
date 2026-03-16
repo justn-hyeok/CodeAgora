@@ -161,6 +161,9 @@ export function checkForfeitThreshold(
   threshold: number = 0.7
 ): { passed: boolean; forfeitRate: number } {
   const totalReviewers = results.length;
+  if (totalReviewers === 0) {
+    return { passed: true, forfeitRate: 0 };
+  }
   const forfeitCount = results.filter((r) => r.status === 'forfeit').length;
   const forfeitRate = forfeitCount / totalReviewers;
 

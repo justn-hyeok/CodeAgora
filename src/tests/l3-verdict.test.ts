@@ -13,6 +13,8 @@ import type { ModeratorReport, DiscussionVerdict, EvidenceDocument } from '../ty
 function makeVerdict(overrides: Partial<DiscussionVerdict> = {}): DiscussionVerdict {
   return {
     discussionId: 'd001',
+    filePath: 'src/test.ts',
+    lineRange: [1, 5] as [number, number],
     finalSeverity: 'WARNING',
     reasoning: 'Some reasoning',
     consensusReached: true,

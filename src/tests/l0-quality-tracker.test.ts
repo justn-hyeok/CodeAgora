@@ -50,6 +50,8 @@ function makeVerdict(
 ): DiscussionVerdict {
   return {
     discussionId,
+    filePath: 'src/test.ts',
+    lineRange: [1, 5] as [number, number],
     finalSeverity: finalSeverity as DiscussionVerdict['finalSeverity'],
     reasoning: 'Test reasoning',
     consensusReached,

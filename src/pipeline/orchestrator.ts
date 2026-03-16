@@ -237,6 +237,8 @@ export async function runPipeline(input: PipelineInput, progress?: ProgressEmitt
       for (const doc of promoted) {
         moderatorReport.discussions.push({
           discussionId: `promoted-${doc.filePath}:${doc.lineRange[0]}`,
+          filePath: doc.filePath,
+          lineRange: doc.lineRange,
           finalSeverity: doc.severity,
           reasoning: `Promoted from unconfirmed queue: ${doc.issueTitle}`,
           consensusReached: false,

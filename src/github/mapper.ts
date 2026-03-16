@@ -99,20 +99,19 @@ export function buildReviewComments(
   positionIndex: DiffPositionIndex,
   reviewerMap?: Map<string, string[]>,
 ): GitHubReviewComment[] {
-  const discussionMap = new Map<string, DiscussionVerdict>();
+  // Build discussion lookup by filePath:startLine for exact matching
+  const discussionByLocation = new Map<string, DiscussionVerdict>();
   for (const d of discussions) {
-    discussionMap.set(d.discussionId, d);
+    const key = `${d.filePath}:${d.lineRange[0]}`;
+    discussionByLocation.set(key, d);
   }
 
   const comments: GitHubReviewComment[] = [];
 
   for (const doc of evidenceDocs) {
-    // Skip dismissed issues
-    const matchingDiscussion = discussions.find(
-      (d) =>
-        d.discussionId.includes(doc.filePath) ||
-        d.discussionId.includes(doc.issueTitle.slice(0, 20)),
-    );
+    // Skip dismissed issues — exact match by file + line
+    const locationKey = `${doc.filePath}:${doc.lineRange[0]}`;
+    const matchingDiscussion = discussionByLocation.get(locationKey);
 
     if (matchingDiscussion?.finalSeverity === 'DISMISSED') continue;
 
@@ -275,15 +274,15 @@ export function mapToGitHubReview(params: {
   const { summary, evidenceDocs, discussions, positionIndex, headSha, sessionId, sessionDate, reviewerMap } =
     params;
 
-  // Filter out dismissed docs
-  const activeDocs = evidenceDocs.filter((doc) => {
-    const d = discussions.find(
-      (disc) =>
-        disc.discussionId.includes(doc.filePath) ||
-        disc.discussionId.includes(doc.issueTitle.slice(0, 20)),
-    );
-    return d?.finalSeverity !== 'DISMISSED';
-  });
+  // Filter out dismissed docs — exact match by file + line
+  const dismissedLocations = new Set(
+    discussions
+      .filter((d) => d.finalSeverity === 'DISMISSED')
+      .map((d) => `${d.filePath}:${d.lineRange[0]}`),
+  );
+  const activeDocs = evidenceDocs.filter(
+    (doc) => !dismissedLocations.has(`${doc.filePath}:${doc.lineRange[0]}`),
+  );
 
   const comments = buildReviewComments(activeDocs, discussions, positionIndex, reviewerMap);
   const body = buildSummaryBody({ summary, sessionId, sessionDate, evidenceDocs: activeDocs, discussions });

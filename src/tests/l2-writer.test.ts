@@ -77,6 +77,8 @@ function makeRound(overrides: Partial<DiscussionRound> = {}): DiscussionRound {
 function makeVerdict(overrides: Partial<DiscussionVerdict> = {}): DiscussionVerdict {
   return {
     discussionId: DISCUSSION_ID,
+    filePath: 'src/test.ts',
+    lineRange: [1, 5] as [number, number],
     finalSeverity: 'WARNING',
     reasoning: 'Majority agreed on WARNING severity.',
     consensusReached: true,
