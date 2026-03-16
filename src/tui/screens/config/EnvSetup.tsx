@@ -85,7 +85,8 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
         return;
       }
       if (input && !key.return) {
-        setKeyInput(s => s + input);
+        const clean = input.replace(/[\x00-\x1F\x7F]/g, '');
+        if (clean) setKeyInput(s => s + clean);
       }
       return;
     }

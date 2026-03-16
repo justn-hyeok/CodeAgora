@@ -40,7 +40,8 @@ export function ModeratorTab({ config, isActive, onConfigChange }: Props): React
       } else if (key.backspace || key.delete) {
         setEditModel(m => m.slice(0, -1));
       } else if (input) {
-        setEditModel(m => m + input);
+        const clean = input.replace(/[\x00-\x1F\x7F]/g, '');
+        if (clean) setEditModel(m => m + clean);
       }
     } else {
       if (input === 'e') {

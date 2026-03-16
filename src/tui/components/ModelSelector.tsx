@@ -129,7 +129,9 @@ export function ModelSelector({ source, onSelect, onCancel }: Props): React.JSX.
       return;
     }
     if (input && !key.return) {
-      setSearch(s => s + input);
+      const clean = input.replace(/[\x00-\x1F\x7F]/g, '');
+      if (!clean) return;
+      setSearch(s => s + clean);
       setSelectedIndex(0);
     }
   });

@@ -145,7 +145,8 @@ export function ReviewersTab({ config, isActive, onConfigChange }: Props): React
         } else if (key.backspace || key.delete) {
           setAddForm(f => f ? { ...f, model: f.model.slice(0, -1) } : f);
         } else if (input) {
-          setAddForm(f => f ? { ...f, model: f.model + input } : f);
+          const clean = input.replace(/[\x00-\x1F\x7F]/g, '');
+          if (clean) setAddForm(f => f ? { ...f, model: f.model + clean } : f);
         }
       }
       return;
@@ -162,7 +163,8 @@ export function ReviewersTab({ config, isActive, onConfigChange }: Props): React
       } else if (key.backspace || key.delete) {
         setEditForm(f => f ? { ...f, model: f.model.slice(0, -1) } : f);
       } else if (input) {
-        setEditForm(f => f ? { ...f, model: f.model + input } : f);
+        const clean = input.replace(/[\x00-\x1F\x7F]/g, '');
+        if (clean) setEditForm(f => f ? { ...f, model: f.model + clean } : f);
       }
       return;
     }
