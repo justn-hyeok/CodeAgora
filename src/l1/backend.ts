@@ -1,16 +1,13 @@
 /**
  * L1 Backend Executor
- * Executes backend CLI commands (OpenCode, Codex, Gemini)
+ * Executes backend CLI commands without shell interpretation (spawn, not exec).
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import type { Backend } from '../types/config.js';
-
-const execAsync = promisify(exec);
 
 // ============================================================================
 // Backend Executor
@@ -25,11 +22,19 @@ export interface BackendInput {
   signal?: AbortSignal;
 }
 
+/** Command definition: binary + args, no shell. */
+interface CliCommand {
+  bin: string;
+  args: string[];
+}
+
 /**
- * Execute backend CLI command
+ * Execute backend CLI command.
+ * API backends call AI SDK directly. CLI backends use spawn() with stdin pipe
+ * to avoid shell interpretation entirely.
  */
 export async function executeBackend(input: BackendInput): Promise<string> {
-  const { backend, model, provider, prompt, timeout } = input;
+  const { backend, prompt, timeout } = input;
 
   // API backend: direct AI SDK call (no CLI subprocess)
   if (backend === 'api') {
@@ -37,118 +42,92 @@ export async function executeBackend(input: BackendInput): Promise<string> {
     return executeViaAISDK(input);
   }
 
-  // CLI backends: write prompt to temp file to avoid shell escaping issues
-  const tmpFile = path.join('/tmp', `prompt-${randomUUID()}.txt`);
+  // CLI backends: pipe prompt via stdin to child process (no shell)
+  const cmd = buildCommand(input);
+  const timeoutMs = timeout * 1000;
 
-  try {
-    await fs.writeFile(tmpFile, prompt, 'utf-8');
-
-    const command = buildCommand(backend, model, provider, tmpFile);
-    const timeoutMs = timeout * 1000;
-
-    const { stdout, stderr } = await execAsync(command, {
+  return new Promise<string>((resolve, reject) => {
+    const child = spawn(cmd.bin, cmd.args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
       timeout: timeoutMs,
-      maxBuffer: 10 * 1024 * 1024, // 10MB
     });
 
-    if (stderr && !stdout) {
-      throw new Error(`Backend error: ${stderr}`);
-    }
+    let stdout = '';
+    let stderr = '';
 
-    return stdout.trim();
-  } catch (error) {
-    if (error instanceof Error) {
-      if ('code' in error && error.code === 'ETIMEDOUT') {
-        throw new Error(`Backend timeout after ${timeout}s`);
+    child.stdout.on('data', (data: Buffer) => { stdout += data.toString(); });
+    child.stderr.on('data', (data: Buffer) => { stderr += data.toString(); });
+
+    child.on('error', (err) => {
+      reject(new Error(`Backend execution failed: ${err.message}`));
+    });
+
+    child.on('close', (code) => {
+      if (code !== 0 && !stdout) {
+        reject(new Error(`Backend error (exit ${code}): ${stderr}`));
+        return;
       }
-      throw new Error(`Backend execution failed: ${error.message}`);
-    }
-    throw error;
-  } finally {
-    // Clean up temp file
-    try {
-      await fs.unlink(tmpFile);
-    } catch {
-      // Ignore cleanup errors
-    }
-  }
+      resolve(stdout.trim());
+    });
+
+    // Write prompt to stdin and close
+    child.stdin.write(prompt);
+    child.stdin.end();
+  });
 }
 
 // ============================================================================
-// Shell Argument Sanitization
+// Argument Validation
 // ============================================================================
 
-const SAFE_SHELL_ARG = /^[a-zA-Z0-9./:@-]+$/;
+const SAFE_ARG = /^[a-zA-Z0-9./:@_-]+$/;
 
-function sanitizeShellArg(arg: string, name: string): string {
-  if (!SAFE_SHELL_ARG.test(arg)) {
+function validateArg(arg: string, name: string): string {
+  if (!SAFE_ARG.test(arg)) {
     throw new Error(`Invalid ${name}: contains unsafe characters — "${arg}"`);
   }
   return arg;
 }
 
 // ============================================================================
-// Command Builders
+// Command Builders (return binary + args, no shell)
 // ============================================================================
 
-function buildCommand(
-  backend: Backend,
-  model: string,
-  provider: string | undefined,
-  promptFile: string
-): string {
+function buildCommand(input: BackendInput): CliCommand {
+  const { backend, model, provider } = input;
+
   switch (backend) {
-    case 'opencode':
-      return buildOpenCodeCommand(model, provider, promptFile);
+    case 'opencode': {
+      if (!provider) throw new Error('OpenCode backend requires provider parameter');
+      return {
+        bin: 'opencode',
+        args: ['run', '-m', `${validateArg(provider, 'provider')}/${validateArg(model, 'model')}`],
+      };
+    }
     case 'codex':
-      return buildCodexCommand(model, promptFile);
+      return {
+        bin: 'codex',
+        args: ['exec', '-m', validateArg(model, 'model'), '-'],
+      };
     case 'gemini':
-      return buildGeminiCommand(model, promptFile);
+      return {
+        bin: 'gemini',
+        args: ['-m', validateArg(model, 'model')],
+      };
     case 'claude':
-      return buildClaudeCommand(model, promptFile);
+      return {
+        bin: 'claude',
+        args: ['--non-interactive', '--model', validateArg(model, 'model')],
+      };
     case 'copilot':
-      return buildCopilotCommand(model, promptFile);
+      return {
+        bin: 'gh',
+        args: ['copilot', 'suggest', '--model', validateArg(model, 'model')],
+      };
     default:
-      throw new Error(`Unsupported backend: ${backend}`);
+      throw new Error(`Unsupported CLI backend: ${backend}`);
   }
 }
 
-function buildOpenCodeCommand(
-  model: string,
-  provider: string | undefined,
-  promptFile: string
-): string {
-  // OpenCode CLI: use 'run' subcommand with model selection
-  // Format: cat prompt.txt | opencode run -m provider/model
-  // Output includes header line, but stdout contains the full response
-  if (!provider) {
-    throw new Error('OpenCode backend requires provider parameter');
-  }
-  return `cat "${promptFile}" | opencode run -m ${sanitizeShellArg(provider, 'provider')}/${sanitizeShellArg(model, 'model')}`;
-}
-
-function buildCodexCommand(model: string, promptFile: string): string {
-  // Codex CLI: stdin pipe with exec command
-  // Format: cat prompt.txt | codex exec -
-  // The '-' tells codex to read from stdin
-  return `cat "${promptFile}" | codex exec -m ${sanitizeShellArg(model, 'model')} -`;
-}
-
-function buildGeminiCommand(model: string, promptFile: string): string {
-  // Gemini CLI: pipe prompt via stdin to avoid shell injection via diff content
-  // Format: cat prompt.txt | gemini -m model
-  return `cat "${promptFile}" | gemini -m ${sanitizeShellArg(model, 'model')}`;
-}
-
-function buildCopilotCommand(model: string, promptFile: string): string {
-  // GitHub Copilot CLI: pipe prompt via stdin
-  // Format: cat prompt.txt | gh copilot -m model
-  return `cat "${promptFile}" | gh copilot suggest --model ${sanitizeShellArg(model, 'model')}`;
-}
-
-function buildClaudeCommand(model: string, promptFile: string): string {
-  // Claude Code: Interactive AI coding agent
-  // For programmatic usage, pipe prompt to stdin
-  // Note: Claude Code is primarily interactive, this is experimental
-  return `cat "${promptFile}" | claude --non-interactive --model ${sanitizeShellArg(model, 'model')}`;
-}
+// Keep sanitizeShellArg export for backward compatibility
+export const sanitizeShellArg = validateArg;

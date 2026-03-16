@@ -1,49 +1,45 @@
 /**
  * L1 Backend Executor Tests
+ * Tests for spawn-based CLI execution (no shell interpretation).
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { EventEmitter } from 'events';
+import { Readable, Writable } from 'stream';
 import type { BackendInput } from '../l1/backend.js';
 
 // ============================================================================
 // Mocks
 // ============================================================================
 
-// Hoist mockExecAsync so it is available inside the vi.mock factory below.
-const { mockExecAsync } = vi.hoisted(() => ({
-  mockExecAsync: vi.fn(),
+// Create a mock child process factory
+function createMockChild(stdout: string, stderr: string, exitCode: number) {
+  const child = new EventEmitter() as any;
+  child.stdout = new Readable({ read() { this.push(stdout); this.push(null); } });
+  child.stderr = new Readable({ read() { this.push(stderr); this.push(null); } });
+  child.stdin = new Writable({ write(_chunk: any, _enc: any, cb: any) { cb(); } });
+  child.stdin.end = vi.fn();
+  // Emit close on next tick
+  setTimeout(() => child.emit('close', exitCode), 10);
+  return child;
+}
+
+const { mockSpawn } = vi.hoisted(() => ({
+  mockSpawn: vi.fn(),
 }));
 
-// Mock child_process so no real subprocesses are spawned
 vi.mock('child_process', () => ({
-  exec: vi.fn(),
+  spawn: mockSpawn,
 }));
 
-// Mock util.promisify to return the hoisted mock function
-vi.mock('util', () => ({
-  promisify: vi.fn(() => mockExecAsync),
-}));
-
-// Mock fs/promises so no temp files are written/deleted on disk
-vi.mock('fs/promises', () => ({
-  default: {
-    writeFile: vi.fn().mockResolvedValue(undefined),
-    unlink: vi.fn().mockResolvedValue(undefined),
-  },
-}));
-
-// Mock the api-backend module so the 'api' branch never hits the AI SDK
 vi.mock('../l1/api-backend.js', () => ({
   executeViaAISDK: vi.fn(),
 }));
 
 import { executeBackend } from '../l1/backend.js';
 import { executeViaAISDK } from '../l1/api-backend.js';
-import fs from 'fs/promises';
 
 const mockExecuteViaAISDK = vi.mocked(executeViaAISDK);
-const mockWriteFile = vi.mocked(fs.writeFile);
-const mockUnlink = vi.mocked(fs.unlink);
 
 // ============================================================================
 // Helpers
@@ -65,91 +61,61 @@ function makeInput(overrides: Partial<BackendInput> = {}): BackendInput {
 // ============================================================================
 
 describe("executeBackend() with backend 'api'", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('delegates to executeViaAISDK and returns its result', async () => {
     mockExecuteViaAISDK.mockResolvedValue('api review output');
-
     const result = await executeBackend(makeInput({ backend: 'api' }));
-
     expect(mockExecuteViaAISDK).toHaveBeenCalledOnce();
     expect(result).toBe('api review output');
   });
 
   it('passes the full input object to executeViaAISDK', async () => {
     mockExecuteViaAISDK.mockResolvedValue('ok');
-
     const input = makeInput({ backend: 'api', model: 'deepseek-r1', provider: 'groq' });
     await executeBackend(input);
-
     expect(mockExecuteViaAISDK).toHaveBeenCalledWith(input);
   });
 
-  it('does not write a temp file when using the api backend', async () => {
+  it('does not spawn a child process for api backend', async () => {
     mockExecuteViaAISDK.mockResolvedValue('ok');
-
     await executeBackend(makeInput({ backend: 'api' }));
-
-    expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(mockSpawn).not.toHaveBeenCalled();
   });
 });
 
 // ============================================================================
-// CLI backends – shared exec behaviour
+// CLI backends – spawn-based execution
 // ============================================================================
 
 describe('executeBackend() CLI backends – successful execution', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('returns trimmed stdout from the subprocess', async () => {
-    mockExecAsync.mockResolvedValue({ stdout: '  review output\n', stderr: '' });
-
+    mockSpawn.mockReturnValue(createMockChild('  review output\n', '', 0));
     const result = await executeBackend(makeInput({ backend: 'opencode' }));
-
     expect(result).toBe('review output');
   });
 
-  it('writes the prompt to a temp file before executing', async () => {
-    mockExecAsync.mockResolvedValue({ stdout: 'ok', stderr: '' });
-
-    await executeBackend(makeInput({ backend: 'codex', provider: undefined }));
-
-    expect(mockWriteFile).toHaveBeenCalledOnce();
-    const [filePath, content, encoding] = mockWriteFile.mock.calls[0] as [string, string, string];
-    expect(filePath).toMatch(/^\/tmp\/prompt-.+\.txt$/);
-    expect(content).toBe('Review this code');
-    expect(encoding).toBe('utf-8');
+  it('writes prompt to stdin of the child process', async () => {
+    const child = createMockChild('ok', '', 0);
+    const writeSpy = vi.spyOn(child.stdin, 'write');
+    mockSpawn.mockReturnValue(child);
+    await executeBackend(makeInput({ backend: 'codex', provider: undefined, prompt: 'test prompt' }));
+    expect(writeSpy).toHaveBeenCalledWith('test prompt');
   });
 
-  it('deletes the temp file after successful execution', async () => {
-    mockExecAsync.mockResolvedValue({ stdout: 'ok', stderr: '' });
-
-    await executeBackend(makeInput({ backend: 'gemini', provider: undefined }));
-
-    expect(mockUnlink).toHaveBeenCalledOnce();
-    const [unlinkedPath] = mockUnlink.mock.calls[0] as [string];
-    expect(unlinkedPath).toMatch(/^\/tmp\/prompt-.+\.txt$/);
-  });
-
-  it('passes the configured timeout (in ms) to exec', async () => {
-    mockExecAsync.mockResolvedValue({ stdout: 'ok', stderr: '' });
-
-    await executeBackend(makeInput({ backend: 'claude', timeout: 30 }));
-
-    const [, options] = mockExecAsync.mock.calls[0] as [string, { timeout: number }];
-    expect(options.timeout).toBe(30_000);
-  });
-
-  it('throws when stderr is non-empty and stdout is empty', async () => {
-    mockExecAsync.mockResolvedValue({ stdout: '', stderr: 'Something went wrong' });
-
+  it('throws when exit code is non-zero and stdout is empty', async () => {
+    mockSpawn.mockReturnValue(createMockChild('', 'Something went wrong', 1));
     await expect(
       executeBackend(makeInput({ backend: 'opencode' }))
-    ).rejects.toThrow('Backend error: Something went wrong');
+    ).rejects.toThrow('Backend error');
+  });
+
+  it('still returns stdout when exit code is non-zero but stdout has content', async () => {
+    mockSpawn.mockReturnValue(createMockChild('partial output', 'some warning', 1));
+    const result = await executeBackend(makeInput({ backend: 'opencode' }));
+    expect(result).toBe('partial output');
   });
 });
 
@@ -160,39 +126,52 @@ describe('executeBackend() CLI backends – successful execution', () => {
 describe('executeBackend() dispatches correct CLI command per backend', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockExecAsync.mockResolvedValue({ stdout: 'ok', stderr: '' });
+    mockSpawn.mockReturnValue(createMockChild('ok', '', 0));
   });
 
-  it("builds an opencode command containing 'opencode run'", async () => {
+  it('spawns opencode with run and provider/model args', async () => {
     await executeBackend(makeInput({ backend: 'opencode', model: 'gpt-4o', provider: 'openai' }));
-
-    const [command] = mockExecAsync.mock.calls[0] as [string];
-    expect(command).toContain('opencode run');
-    expect(command).toContain('openai/gpt-4o');
+    expect(mockSpawn).toHaveBeenCalledWith(
+      'opencode',
+      ['run', '-m', 'openai/gpt-4o'],
+      expect.any(Object)
+    );
   });
 
-  it("builds a codex command containing 'codex exec'", async () => {
+  it('spawns codex with exec and model args', async () => {
     await executeBackend(makeInput({ backend: 'codex', model: 'o3', provider: undefined }));
-
-    const [command] = mockExecAsync.mock.calls[0] as [string];
-    expect(command).toContain('codex exec');
-    expect(command).toContain('o3');
+    expect(mockSpawn).toHaveBeenCalledWith(
+      'codex',
+      ['exec', '-m', 'o3', '-'],
+      expect.any(Object)
+    );
   });
 
-  it("builds a gemini command containing 'gemini'", async () => {
+  it('spawns gemini with -m flag', async () => {
     await executeBackend(makeInput({ backend: 'gemini', model: 'gemini-2.0-flash', provider: undefined }));
-
-    const [command] = mockExecAsync.mock.calls[0] as [string];
-    expect(command).toContain('gemini');
-    expect(command).toContain('gemini-2.0-flash');
+    expect(mockSpawn).toHaveBeenCalledWith(
+      'gemini',
+      ['-m', 'gemini-2.0-flash'],
+      expect.any(Object)
+    );
   });
 
-  it("builds a claude command containing 'claude --non-interactive'", async () => {
+  it('spawns claude with --non-interactive', async () => {
     await executeBackend(makeInput({ backend: 'claude', model: 'claude-3-5-sonnet-20241022' }));
+    expect(mockSpawn).toHaveBeenCalledWith(
+      'claude',
+      ['--non-interactive', '--model', 'claude-3-5-sonnet-20241022'],
+      expect.any(Object)
+    );
+  });
 
-    const [command] = mockExecAsync.mock.calls[0] as [string];
-    expect(command).toContain('claude --non-interactive');
-    expect(command).toContain('claude-3-5-sonnet-20241022');
+  it('spawns gh copilot suggest for copilot backend', async () => {
+    await executeBackend(makeInput({ backend: 'copilot', model: 'gpt-4o', provider: undefined }));
+    expect(mockSpawn).toHaveBeenCalledWith(
+      'gh',
+      ['copilot', 'suggest', '--model', 'gpt-4o'],
+      expect.any(Object)
+    );
   });
 });
 
@@ -201,9 +180,7 @@ describe('executeBackend() dispatches correct CLI command per backend', () => {
 // ============================================================================
 
 describe("executeBackend() with backend 'opencode'", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('throws when provider is missing', async () => {
     await expect(
@@ -217,61 +194,33 @@ describe("executeBackend() with backend 'opencode'", () => {
 // ============================================================================
 
 describe('executeBackend() with unknown backend', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('throws an unsupported backend error', async () => {
     await expect(
       executeBackend(makeInput({ backend: 'unknown' as any }))
-    ).rejects.toThrow('Unsupported backend: unknown');
+    ).rejects.toThrow('Unsupported CLI backend: unknown');
   });
 });
 
 // ============================================================================
-// Timeout handling
+// Error handling
 // ============================================================================
 
-describe('executeBackend() timeout handling', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe('executeBackend() error handling', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
 
-  it('wraps ETIMEDOUT error with a human-readable message', async () => {
-    const timeoutError = Object.assign(new Error('Command timed out'), { code: 'ETIMEDOUT' });
-    mockExecAsync.mockRejectedValue(timeoutError);
-
-    await expect(
-      executeBackend(makeInput({ backend: 'opencode', timeout: 5 }))
-    ).rejects.toThrow('Backend timeout after 5s');
-  });
-
-  it('deletes the temp file even when a timeout occurs', async () => {
-    const timeoutError = Object.assign(new Error('Command timed out'), { code: 'ETIMEDOUT' });
-    mockExecAsync.mockRejectedValue(timeoutError);
+  it('rejects when child process emits error event', async () => {
+    const child = new EventEmitter() as any;
+    child.stdout = new Readable({ read() { this.push(null); } });
+    child.stderr = new Readable({ read() { this.push(null); } });
+    child.stdin = new Writable({ write(_c: any, _e: any, cb: any) { cb(); } });
+    child.stdin.end = vi.fn();
+    setTimeout(() => child.emit('error', new Error('spawn ENOENT')), 10);
+    mockSpawn.mockReturnValue(child);
 
     await expect(
-      executeBackend(makeInput({ backend: 'opencode', timeout: 5 }))
-    ).rejects.toThrow();
-
-    expect(mockUnlink).toHaveBeenCalledOnce();
-  });
-
-  it('wraps generic exec errors with a Backend execution failed message', async () => {
-    mockExecAsync.mockRejectedValue(new Error('spawn error'));
-
-    await expect(
-      executeBackend(makeInput({ backend: 'codex', provider: undefined }))
-    ).rejects.toThrow('Backend execution failed: spawn error');
-  });
-
-  it('deletes the temp file even when a generic exec error occurs', async () => {
-    mockExecAsync.mockRejectedValue(new Error('spawn error'));
-
-    await expect(
-      executeBackend(makeInput({ backend: 'codex', provider: undefined }))
-    ).rejects.toThrow();
-
-    expect(mockUnlink).toHaveBeenCalledOnce();
+      executeBackend(makeInput({ backend: 'opencode' }))
+    ).rejects.toThrow('Backend execution failed: spawn ENOENT');
   });
 });

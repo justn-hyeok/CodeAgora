@@ -89,15 +89,23 @@ function randomElement<T>(array: T[]): T | undefined {
  */
 async function loadPersona(personaPath: string): Promise<string> {
   try {
-    // Resolve path relative to project root
-    const fullPath = path.isAbsolute(personaPath)
-      ? personaPath
-      : path.join(process.cwd(), personaPath);
+    // Block absolute paths to prevent path traversal
+    if (path.isAbsolute(personaPath)) {
+      console.warn(`[Persona] Absolute path blocked: ${personaPath}`);
+      return '';
+    }
+
+    // Resolve relative to project root and verify it stays within
+    const projectRoot = process.cwd();
+    const fullPath = path.resolve(projectRoot, personaPath);
+    if (!fullPath.startsWith(projectRoot + path.sep) && fullPath !== projectRoot) {
+      console.warn(`[Persona] Path traversal blocked: ${personaPath}`);
+      return '';
+    }
 
     const content = await readFile(fullPath, 'utf-8');
     return content.trim();
   } catch (error) {
-    // Gracefully handle missing persona files
     console.warn(`[Persona] Failed to load ${personaPath}:`, error instanceof Error ? error.message : error);
     return '';
   }
@@ -472,20 +480,41 @@ Evaluate the evidence and provide your verdict.`;
 }
 
 function parseStance(response: string): 'agree' | 'disagree' | 'neutral' {
+  // Check first line for explicit stance keyword to avoid misclassification
+  // e.g. "I agree that we should disagree" would wrongly match disagree with substring
+  const firstLine = response.split('\n')[0].toLowerCase().trim();
+
+  // Exact keyword at start of first line takes priority
+  if (/^(stance:\s*)?agree\b/i.test(firstLine)) return 'agree';
+  if (/^(stance:\s*)?disagree\b/i.test(firstLine)) return 'disagree';
+  if (/^(stance:\s*)?neutral\b/i.test(firstLine)) return 'neutral';
+
+  // Fallback: scan full response but require standalone word boundaries
   const lower = response.toLowerCase();
-  if (lower.includes('agree') && !lower.includes('disagree')) return 'agree';
-  if (lower.includes('disagree')) return 'disagree';
+  const agreeMatch = lower.match(/\b(agree)\b/g);
+  const disagreeMatch = lower.match(/\b(disagree)\b/g);
+
+  // disagree contains "agree" so count disagree first, subtract from agree
+  const agreeCount = (agreeMatch?.length ?? 0) - (disagreeMatch?.length ?? 0);
+  const disagreeCount = disagreeMatch?.length ?? 0;
+
+  if (agreeCount > disagreeCount) return 'agree';
+  if (disagreeCount > agreeCount) return 'disagree';
   return 'neutral';
 }
 
 function parseForcedDecision(response: string): { severity: 'HARSHLY_CRITICAL' | 'CRITICAL' | 'WARNING' | 'SUGGESTION' | 'DISMISSED'; reasoning: string } {
-  const lower = response.toLowerCase();
+  // Check first few lines for explicit severity keyword
+  const firstLines = response.split('\n').slice(0, 5).join('\n').toLowerCase();
 
   let severity: 'HARSHLY_CRITICAL' | 'CRITICAL' | 'WARNING' | 'SUGGESTION' | 'DISMISSED' = 'SUGGESTION';
-  if (lower.includes('harshly_critical') || lower.includes('harshly critical')) severity = 'HARSHLY_CRITICAL';
-  else if (lower.includes('critical')) severity = 'CRITICAL';
-  else if (lower.includes('warning')) severity = 'WARNING';
-  else if (lower.includes('dismissed')) severity = 'DISMISSED';
+
+  // Match most specific first (harshly_critical before critical)
+  if (/\b(harshly[_\s]critical)\b/.test(firstLines)) severity = 'HARSHLY_CRITICAL';
+  else if (/\bseverity:\s*critical\b/.test(firstLines) || /^critical\b/m.test(firstLines)) severity = 'CRITICAL';
+  else if (/\bcritical\b/.test(firstLines) && !/\bnot\s+critical\b/.test(firstLines)) severity = 'CRITICAL';
+  else if (/\bwarning\b/.test(firstLines)) severity = 'WARNING';
+  else if (/\bdismissed?\b/.test(firstLines)) severity = 'DISMISSED';
 
   return {
     severity,

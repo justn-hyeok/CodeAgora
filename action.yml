@@ -60,22 +60,30 @@ runs:
     - name: Fetch PR diff
       shell: bash
       run: |
-        gh pr diff ${{ github.event.pull_request.number }} \
-          --repo ${{ github.repository }} \
+        gh pr diff "$PR_NUMBER" \
+          --repo "$REPO" \
           > /tmp/codeagora-pr.diff
       env:
         GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
 
     - name: Run CodeAgora review
       id: review
       shell: bash
       run: |
-        node ${{ github.action_path }}/dist/github-action.js \
+        node "$ACTION_PATH/dist/github-action.js" \
           --diff /tmp/codeagora-pr.diff \
-          --pr ${{ github.event.pull_request.number }} \
-          --sha ${{ github.event.pull_request.head.sha }} \
-          --repo ${{ github.repository }} \
-          --fail-on-reject ${{ inputs.fail-on-reject }} \
-          --max-diff-lines ${{ inputs.max-diff-lines }}
+          --pr "$PR_NUMBER" \
+          --sha "$HEAD_SHA" \
+          --repo "$REPO" \
+          --fail-on-reject "$FAIL_ON_REJECT" \
+          --max-diff-lines "$MAX_DIFF_LINES"
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        ACTION_PATH: ${{ github.action_path }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        REPO: ${{ github.repository }}
+        FAIL_ON_REJECT: ${{ inputs.fail-on-reject }}
+        MAX_DIFF_LINES: ${{ inputs.max-diff-lines }}
