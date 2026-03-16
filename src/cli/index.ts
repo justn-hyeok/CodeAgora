@@ -28,6 +28,10 @@ import { fetchPrDiff } from '../github/pr-diff.js';
 import { buildDiffPositionIndex } from '../github/diff-parser.js';
 import { mapToGitHubReview } from '../github/mapper.js';
 import { postReview, setCommitStatus } from '../github/poster.js';
+import { loadCredentials } from '../config/credentials.js';
+
+// Load API keys from ~/.config/codeagora/credentials
+loadCredentials();
 
 /**
  * Derive the display name from the invoked binary path.
