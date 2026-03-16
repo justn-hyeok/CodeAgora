@@ -61,3 +61,4 @@ reviews/
 .codeagora/
 .ca/sessions/
 .ca/logs/
+.ca/config.json
