@@ -11,6 +11,8 @@ import { runInit, generateReviewIgnore, type InitOptions } from '../cli/commands
 import { runDoctor, formatDoctorReport, getProviderEnvVar } from '../cli/commands/doctor.js';
 import { listProviders, formatProviderList } from '../cli/commands/providers.js';
 
+const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
+
 // ============================================================================
 // init
 // ============================================================================
@@ -170,7 +172,7 @@ describe('formatDoctorReport()', () => {
       checks: [{ name: 'test', status: 'pass' as const, message: 'All good' }],
       summary: { pass: 1, fail: 0, warn: 0 },
     };
-    expect(formatDoctorReport(result)).toContain('✓ All good');
+    expect(stripAnsi(formatDoctorReport(result))).toContain('✓ All good');
   });
 
   it('uses ✗ for fail checks', () => {
@@ -178,7 +180,7 @@ describe('formatDoctorReport()', () => {
       checks: [{ name: 'test', status: 'fail' as const, message: 'Something broke' }],
       summary: { pass: 0, fail: 1, warn: 0 },
     };
-    expect(formatDoctorReport(result)).toContain('✗ Something broke');
+    expect(stripAnsi(formatDoctorReport(result))).toContain('✗ Something broke');
   });
 
   it('uses ! for warn checks', () => {
@@ -186,7 +188,7 @@ describe('formatDoctorReport()', () => {
       checks: [{ name: 'test', status: 'warn' as const, message: 'Minor issue' }],
       summary: { pass: 0, fail: 0, warn: 1 },
     };
-    expect(formatDoctorReport(result)).toContain('! Minor issue');
+    expect(stripAnsi(formatDoctorReport(result))).toContain('! Minor issue');
   });
 
   it('includes summary line', () => {
@@ -198,7 +200,7 @@ describe('formatDoctorReport()', () => {
       ],
       summary: { pass: 1, fail: 1, warn: 1 },
     };
-    const report = formatDoctorReport(result);
+    const report = stripAnsi(formatDoctorReport(result));
     expect(report).toContain('1 passed');
     expect(report).toContain('1 failed');
     expect(report).toContain('1 warnings');
