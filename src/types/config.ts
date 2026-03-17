@@ -222,6 +222,7 @@ export const ConfigSchema = z.object({
   notifications: NotificationsConfigSchema.optional(),
   github: GitHubIntegrationSchema.optional(),
   autoApprove: AutoApproveConfigSchema,
+  plugins: z.array(z.string()).optional(),
 });
 export type Config = z.infer<typeof ConfigSchema>;
 

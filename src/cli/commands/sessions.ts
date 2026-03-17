@@ -357,6 +357,82 @@ export async function diffSessions(
 }
 
 // ============================================================================
+// Prune
+// ============================================================================
+
+export interface PruneResult {
+  deleted: number;
+  errors: number;
+}
+
+/**
+ * Delete sessions older than maxAgeDays from baseDir/.ca/sessions/.
+ * Returns counts of deleted and errored sessions.
+ */
+export async function pruneSessions(
+  baseDir: string,
+  maxAgeDays: number = 30
+): Promise<PruneResult> {
+  const sessionsDir = path.join(baseDir, '.ca', 'sessions');
+  const cutoffMs = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
+  const cutoffDate = new Date(cutoffMs).toISOString().slice(0, 10); // 'YYYY-MM-DD'
+
+  let deleted = 0;
+  let errors = 0;
+
+  let dateDirs: string[];
+  try {
+    const entries = await fs.readdir(sessionsDir);
+    dateDirs = entries.filter(d => !d.includes('..'));
+  } catch {
+    return { deleted, errors };
+  }
+
+  for (const dateDir of dateDirs) {
+    // Only prune date directories older than the cutoff
+    if (dateDir >= cutoffDate) continue;
+
+    const datePath = path.join(sessionsDir, dateDir);
+    let stat: Awaited<ReturnType<typeof fs.stat>>;
+    try {
+      stat = await fs.stat(datePath);
+    } catch {
+      continue;
+    }
+    if (!stat.isDirectory()) continue;
+
+    let sessionIds: string[];
+    try {
+      sessionIds = await fs.readdir(datePath);
+    } catch {
+      continue;
+    }
+
+    for (const sessionId of sessionIds) {
+      const sessionPath = path.join(datePath, sessionId);
+      try {
+        await fs.rm(sessionPath, { recursive: true, force: true });
+        deleted++;
+      } catch {
+        errors++;
+      }
+    }
+
+    // Remove empty date directory
+    try {
+      const remaining = await fs.readdir(datePath);
+      if (remaining.length === 0) {
+        await fs.rmdir(datePath);
+      }
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  return { deleted, errors };
+}
+
+// ============================================================================
 // Formatters
 // ============================================================================
 

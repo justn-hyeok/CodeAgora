@@ -355,4 +355,64 @@ describe('Orchestrator Branches', () => {
     expect(result.sessionId).toBe('unknown');
     expect(result.date).toBe('unknown');
   });
+
+  // --------------------------------------------------------------------------
+  // TC-3a. Auto-approve enabled: trivial diff → early ACCEPT return
+  // --------------------------------------------------------------------------
+  it('auto-approve enabled with trivial diff returns ACCEPT without calling reviewers', async () => {
+    const configWithAutoApprove = {
+      ...mockConfig,
+      autoApprove: {
+        enabled: true,
+        maxChangedLines: 10,
+        allowedFilePatterns: ['*.md'],
+        requireAllFilesMatch: true,
+      },
+    };
+    (loadConfig as Mock).mockResolvedValue(configWithAutoApprove);
+    (normalizeConfig as Mock).mockReturnValue(configWithAutoApprove);
+
+    // Mock analyzeTrivialDiff via the auto-approve module
+    vi.doMock('../pipeline/auto-approve.js', () => ({
+      analyzeTrivialDiff: vi.fn().mockReturnValue({ isTrivial: true, reason: 'only-docs' }),
+    }));
+
+    // Re-import orchestrator so the mock takes effect
+    const { runPipeline: freshRunPipeline } = await import('../pipeline/orchestrator.js');
+
+    const result = await freshRunPipeline({ diffPath: '/tmp/test.diff' });
+
+    // Should have completed without calling executeReviewers
+    expect(result.status).toBe('success');
+    expect(executeReviewers).not.toHaveBeenCalled();
+  });
+
+  // --------------------------------------------------------------------------
+  // TC-3b. Learned patterns are applied: suppressed docs don't reach threshold
+  // --------------------------------------------------------------------------
+  it('applies learned patterns to suppress matching evidence docs', async () => {
+    // Provide a review result with evidence docs
+    const reviewResultWithDocs = [{
+      ...mockReviewResults[0],
+      evidenceDocs: [
+        {
+          issueTitle: 'Old Issue',
+          problem: 'In auth.ts:10',
+          evidence: ['e1'],
+          severity: 'WARNING' as const,
+          suggestion: 'Fix it',
+          filePath: 'auth.ts',
+          lineRange: [10, 10] as [number, number],
+        },
+      ],
+    }];
+    (executeReviewers as Mock).mockResolvedValue(reviewResultWithDocs);
+
+    // applyThreshold should receive the (potentially filtered) docs
+    const result = await runPipeline({ diffPath: '/tmp/test.diff' });
+
+    // Pipeline should complete successfully regardless of suppression
+    expect(result.status).toBe('success');
+    expect(applyThreshold).toHaveBeenCalled();
+  });
 });

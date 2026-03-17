@@ -1,6 +1,6 @@
 {
   "name": "codeagora",
-  "version": "1.1.0-rc.3",
+  "version": "1.1.0-rc.4",
   "type": "module",
   "description": "Multi-LLM code review pipeline — parallel reviewers, structured debate, consensus verdict",
   "license": "MIT",
@@ -33,7 +33,7 @@
     "agora": "./dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && cp -r src/data dist/",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "lint": "eslint src/",

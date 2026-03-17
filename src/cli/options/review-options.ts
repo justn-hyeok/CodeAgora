@@ -100,24 +100,36 @@ export async function readStdin(timeoutMs: number = 30_000): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
 
+    const dataHandler = (chunk: Buffer) => {
+      chunks.push(chunk);
+    };
+
+    const endHandler = () => {
+      clearTimeout(timer);
+      process.stdin.removeListener('data', dataHandler);
+      process.stdin.removeListener('end', endHandler);
+      process.stdin.removeListener('error', errorHandler);
+      resolve(Buffer.concat(chunks).toString('utf-8'));
+    };
+
+    const errorHandler = (err: Error) => {
+      clearTimeout(timer);
+      process.stdin.removeListener('data', dataHandler);
+      process.stdin.removeListener('end', endHandler);
+      process.stdin.removeListener('error', errorHandler);
+      reject(err);
+    };
+
     const timer = setTimeout(() => {
-      process.stdin.removeAllListeners();
+      process.stdin.removeListener('data', dataHandler);
+      process.stdin.removeListener('end', endHandler);
+      process.stdin.removeListener('error', errorHandler);
       process.stdin.pause();
       reject(new Error(`stdin read timed out after ${timeoutMs}ms. Did you forget to pipe input?`));
     }, timeoutMs);
 
-    process.stdin.on('data', (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-
-    process.stdin.on('end', () => {
-      clearTimeout(timer);
-      resolve(Buffer.concat(chunks).toString('utf-8'));
-    });
-
-    process.stdin.on('error', (err: Error) => {
-      clearTimeout(timer);
-      reject(err);
-    });
+    process.stdin.on('data', dataHandler);
+    process.stdin.on('end', endHandler);
+    process.stdin.on('error', errorHandler);
   });
 }

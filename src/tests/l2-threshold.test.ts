@@ -125,4 +125,62 @@ describe('L2 Threshold Logic', () => {
     expect(result.unconfirmed).toHaveLength(0);
     expect(result.suggestions).toHaveLength(1);
   });
+
+  // TC-4: HARSHLY_CRITICAL with threshold=0 never registers (falsy check)
+  it('should not register HARSHLY_CRITICAL when threshold is 0', () => {
+    const settingsZeroHC: DiscussionSettings = {
+      ...settings,
+      registrationThreshold: {
+        ...settings.registrationThreshold,
+        HARSHLY_CRITICAL: 0,
+      },
+    };
+
+    const docs: EvidenceDocument[] = [
+      {
+        issueTitle: 'Critical Security Issue',
+        problem: 'In auth.ts:5',
+        evidence: ['Evidence 1'],
+        severity: 'HARSHLY_CRITICAL',
+        suggestion: 'Fix immediately',
+        filePath: 'auth.ts',
+        lineRange: [5, 5],
+      },
+    ];
+
+    const result = applyThreshold(docs, settingsZeroHC);
+
+    // threshold=0 means it never registers as HARSHLY_CRITICAL discussion
+    expect(result.discussions).toHaveLength(0);
+  });
+
+  // TC-4: SUGGESTION is always null in schema — always routes to suggestions array
+  it('should place SUGGESTION in suggestions array (SUGGESTION threshold is always null)', () => {
+    const docs: EvidenceDocument[] = [
+      {
+        issueTitle: 'Minor nit',
+        problem: 'In util.ts:1',
+        evidence: ['e1'],
+        severity: 'SUGGESTION',
+        suggestion: 'Rename variable',
+        filePath: 'util.ts',
+        lineRange: [1, 1],
+      },
+    ];
+
+    const result = applyThreshold(docs, settings);
+
+    expect(result.suggestions).toHaveLength(1);
+    expect(result.discussions).toHaveLength(0);
+    expect(result.unconfirmed).toHaveLength(0);
+  });
+
+  // TC-4: Empty docs → all empty results
+  it('should return empty results for empty input', () => {
+    const result = applyThreshold([], settings);
+
+    expect(result.discussions).toHaveLength(0);
+    expect(result.unconfirmed).toHaveLength(0);
+    expect(result.suggestions).toHaveLength(0);
+  });
 });

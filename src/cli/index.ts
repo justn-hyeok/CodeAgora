@@ -13,7 +13,7 @@ import { runInit, runInitInteractive, UserCancelledError } from './commands/init
 import { runDoctor, formatDoctorReport, runLiveHealthCheck } from './commands/doctor.js';
 import { listProviders, formatProviderList } from './commands/providers.js';
 import {
-  listSessions, showSession, diffSessions, getSessionStats,
+  listSessions, showSession, diffSessions, getSessionStats, pruneSessions,
   formatSessionList, formatSessionDetail, formatSessionDiff, formatSessionStats,
 } from './commands/sessions.js';
 import { formatOutput, type OutputFormat } from './formatters/review-output.js';
@@ -484,6 +484,24 @@ sessionsCmd
     try {
       const diff = await diffSessions(process.cwd(), session1, session2);
       console.log(formatSessionDiff(diff));
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+sessionsCmd
+  .command('prune')
+  .description('Delete sessions older than N days (default: 30)')
+  .option('--days <n>', 'Maximum age in days', parseInt)
+  .action(async (opts: { days?: number }) => {
+    try {
+      const days = opts.days ?? 30;
+      const result = await pruneSessions(process.cwd(), days);
+      console.log(`Pruned ${result.deleted} session(s) older than ${days} day(s).`);
+      if (result.errors > 0) {
+        console.warn(`${result.errors} session(s) could not be deleted.`);
+      }
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : error);
       process.exit(1);
