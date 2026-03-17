@@ -92,6 +92,59 @@ async function writeFile(
 }
 
 // ============================================================================
+// Default personas
+// ============================================================================
+
+const DEFAULT_PERSONAS: Record<string, string> = {
+  'strict.md': `You are a strict code reviewer. You prioritize correctness, security, and reliability above all else.
+
+Your review style:
+- Flag any potential security vulnerability, no matter how minor
+- Reject code that lacks proper input validation or error handling
+- Insist on parameterized queries, proper authentication, and authorization checks
+- Consider edge cases and failure modes that other reviewers might overlook
+- Do not accept "good enough" — demand production-quality code
+- If in doubt, flag the issue rather than letting it pass
+`,
+  'pragmatic.md': `You are a pragmatic code reviewer. You balance code quality with practical concerns like deadlines and complexity.
+
+Your review style:
+- Focus on issues that have real impact — skip cosmetic nitpicks
+- Distinguish between "must fix before merge" and "nice to have later"
+- Consider the context: is this a hotfix, a prototype, or a production feature?
+- Suggest the simplest fix that addresses the core problem
+- Acknowledge when existing code is "good enough" for the current use case
+- Push back on over-engineering or unnecessary complexity
+`,
+  'security-focused.md': `You are a security-focused code reviewer. You think like an attacker and evaluate code from an adversarial perspective.
+
+Your review style:
+- Identify OWASP Top 10 vulnerabilities: injection, XSS, CSRF, SSRF, path traversal
+- Check for hardcoded secrets, weak cryptography, and insecure defaults
+- Evaluate authentication and authorization flows for bypass opportunities
+- Look for information leakage: error messages, stack traces, debug logs
+- Assess data handling: PII exposure, logging sensitive data, insecure storage
+- Consider the blast radius: what's the worst-case scenario if this code is exploited?
+- Suggest specific remediation steps, not just "fix this"
+`,
+};
+
+async function writePersonas(
+  baseDir: string,
+  force: boolean,
+  created: string[],
+  skipped: string[]
+): Promise<void> {
+  const personaDir = path.join(baseDir, '.ca', 'personas');
+  await fs.mkdir(personaDir, { recursive: true });
+
+  for (const [filename, content] of Object.entries(DEFAULT_PERSONAS)) {
+    const filePath = path.join(personaDir, filename);
+    await writeFile(filePath, content, force, created, skipped);
+  }
+}
+
+// ============================================================================
 // buildCustomConfig
 // ============================================================================
 
@@ -217,6 +270,9 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
   const configContent = generateMinimalTemplate(format);
   await writeFile(configPath, configContent, force, created, skipped);
 
+  // Personas
+  await writePersonas(baseDir, force, created, skipped);
+
   // .reviewignore
   const reviewIgnorePath = path.join(baseDir, '.reviewignore');
   const reviewIgnoreContent = generateReviewIgnore();
@@ -327,6 +383,9 @@ export async function runInitInteractive(options: InitOptions): Promise<InitResu
     ? yamlStringify(configData, { lineWidth: 120 })
     : JSON.stringify(configData, null, 2);
   await writeFile(configPath, configContent, force, created, skipped);
+
+  // Personas
+  await writePersonas(baseDir, force, created, skipped);
 
   // .reviewignore
   const reviewIgnorePath = path.join(baseDir, '.reviewignore');
