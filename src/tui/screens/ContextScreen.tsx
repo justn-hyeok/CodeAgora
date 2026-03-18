@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { DiffViewer } from '../components/DiffViewer.js';
 import type { DiffFile, DiffHunk, DiffIssue } from '../components/DiffViewer.js';
+import { colors } from '../theme.js';
+import { t } from '../../i18n/index.js';
 
 // ============================================================================
 // Types
@@ -101,24 +103,28 @@ export function ContextScreen({ diffContent, evidenceDocs, onBack }: Props): Rea
   if (diffFiles.length === 0) {
     return (
       <Box flexDirection="column" padding={1}>
-        <Text bold>Diff Context</Text>
-        <Text color="yellow">No diff content available.</Text>
+        <Text bold color={colors.primary}>{t('context.title')}</Text>
+        <Text color={colors.warning}>{t('context.noDiff')}</Text>
         <Box marginTop={1}>
-          <Text dimColor>q: back</Text>
+          <Text dimColor>{t('context.back')}</Text>
         </Box>
       </Box>
     );
   }
 
+  const filesLabel = diffFiles.length === 1
+    ? t('context.files').replace('{count}', String(diffFiles.length))
+    : t('context.filesPlural').replace('{count}', String(diffFiles.length));
+
   return (
     <Box flexDirection="column" padding={1}>
       <Box marginBottom={1}>
-        <Text bold>Diff Context</Text>
-        <Text dimColor>  {diffFiles.length} file{diffFiles.length !== 1 ? 's' : ''}</Text>
+        <Text bold color={colors.primary}>{t('context.title')}</Text>
+        <Text dimColor>  {filesLabel}</Text>
       </Box>
       <DiffViewer files={diffFiles} />
       <Box marginTop={1}>
-        <Text dimColor>q: back</Text>
+        <Text dimColor>{t('context.back')}</Text>
       </Box>
     </Box>
   );

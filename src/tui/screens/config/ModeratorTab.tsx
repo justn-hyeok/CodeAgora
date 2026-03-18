@@ -107,7 +107,7 @@ export function ModeratorTab({ config, isActive, onConfigChange }: Props): React
               </Text>
               {isCycle ? (
                 <Text color={isActive ? colors.primary : undefined}>
-                  {value}{isActive ? <Text dimColor> (j/k)</Text> : null}
+                  {value}{isActive ? <Text dimColor> {t('config.edit.cycleHint')}</Text> : null}
                 </Text>
               ) : (
                 <TextInput value={value} isActive={isActive} />
@@ -116,7 +116,7 @@ export function ModeratorTab({ config, isActive, onConfigChange }: Props): React
           );
         })}
         <Box marginTop={1}>
-          <Text dimColor>Tab: next field  Enter: save  Esc: cancel</Text>
+          <Text dimColor>{t('config.edit.hints')}</Text>
         </Box>
       </Panel>
     );

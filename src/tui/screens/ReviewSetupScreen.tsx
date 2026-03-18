@@ -5,6 +5,8 @@ import { loadConfigFrom } from '../../config/loader.js';
 import { getEnabledReviewers } from '../../config/loader.js';
 import type { AgentConfig } from '../../types/config.js';
 import type { Screen } from '../hooks/useRouter.js';
+import { colors } from '../theme.js';
+import { t } from '../../i18n/index.js';
 
 // ============================================================================
 // Types
@@ -150,19 +152,19 @@ export function ReviewSetupScreen({ onNavigate, onBack }: ReviewSetupScreenProps
   if (step === 'diff-input') {
     return (
       <Box flexDirection="column" padding={1}>
-        <Text bold>Review Setup — Step 1 of 3</Text>
+        <Text bold>{t('review.setup.step').replace('{step}', '1').replace('{total}', '3')}</Text>
         <Box marginTop={1}>
-          <Text>Diff file path: </Text>
-          <Text color="cyan">{diffInput}</Text>
-          <Text color="gray">_</Text>
+          <Text>{t('review.setup.diffPath')}</Text>
+          <Text color={colors.primary}>{diffInput}</Text>
+          <Text color={colors.secondary}>_</Text>
         </Box>
         {diffError ? (
           <Box marginTop={1}>
-            <Text color="red">{diffError}</Text>
+            <Text color={colors.error}>{diffError}</Text>
           </Box>
         ) : null}
         <Box marginTop={1}>
-          <Text dimColor>Press Enter to continue, Esc to go back</Text>
+          <Text dimColor>{t('review.setup.continueHint')}</Text>
         </Box>
       </Box>
     );
@@ -172,12 +174,12 @@ export function ReviewSetupScreen({ onNavigate, onBack }: ReviewSetupScreenProps
     if (configError === 'no-config') {
       return (
         <Box flexDirection="column" padding={1}>
-          <Text bold>Review Setup — Step 2 of 3</Text>
+          <Text bold>{t('review.setup.step').replace('{step}', '2').replace('{total}', '3')}</Text>
           <Box marginTop={1}>
-            <Text color="yellow">No config found. Run &apos;agora init&apos; first.</Text>
+            <Text color={colors.warning}>{t('review.setup.noConfig')}</Text>
           </Box>
           <Box marginTop={1}>
-            <Text dimColor>Press Esc or &apos;b&apos; to go back</Text>
+            <Text dimColor>{t('review.setup.escBack')}</Text>
           </Box>
         </Box>
       );
@@ -185,20 +187,20 @@ export function ReviewSetupScreen({ onNavigate, onBack }: ReviewSetupScreenProps
 
     return (
       <Box flexDirection="column" padding={1}>
-        <Text bold>Review Setup — Step 2 of 3</Text>
+        <Text bold>{t('review.setup.step').replace('{step}', '2').replace('{total}', '3')}</Text>
         <Box marginTop={1}>
-          <Text>Reviewers ({enabledCount}/{reviewers.length} enabled):</Text>
+          <Text>{t('review.setup.reviewers').replace('{enabled}', String(enabledCount)).replace('{total}', String(reviewers.length))}</Text>
         </Box>
         {reviewers.map((reviewer, i) => (
           <Box key={reviewer.id} marginLeft={2}>
-            <Text color={i === selectedIndex ? 'cyan' : undefined}>
+            <Text color={i === selectedIndex ? colors.primary : undefined}>
               {i === selectedIndex ? '> ' : '  '}
               [{toggleStates[i] ? 'x' : ' '}] {reviewer.label ?? reviewer.id} ({reviewer.provider ?? reviewer.backend}/{reviewer.model})
             </Text>
           </Box>
         ))}
         <Box marginTop={1}>
-          <Text dimColor>Up/Down to select, Space to toggle, Enter to continue, b to go back</Text>
+          <Text dimColor>{t('review.setup.navHint')}</Text>
         </Box>
       </Box>
     );
@@ -211,15 +213,15 @@ export function ReviewSetupScreen({ onNavigate, onBack }: ReviewSetupScreenProps
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Text bold>Review Setup — Step 3 of 3</Text>
+      <Text bold>{t('review.setup.step').replace('{step}', '3').replace('{total}', '3')}</Text>
       <Box marginTop={1} flexDirection="column">
-        <Text>  Diff: <Text color="cyan">{diffInput.trim()}</Text></Text>
-        <Text>  Reviewers: <Text color="cyan">{enabledCount}</Text></Text>
-        <Text>  Providers: <Text color="cyan">{providerInfo}</Text></Text>
+        <Text>{t('review.setup.diff')} <Text color={colors.primary}>{diffInput.trim()}</Text></Text>
+        <Text>{t('review.setup.reviewerCount')} <Text color={colors.primary}>{enabledCount}</Text></Text>
+        <Text>{t('review.setup.providers')} <Text color={colors.primary}>{providerInfo}</Text></Text>
       </Box>
       <Box marginTop={1}>
-        <Text color="green">[ Start Review ]</Text>
-        <Text dimColor>  Press Enter to start, b/Esc to go back</Text>
+        <Text color={colors.success}>{t('review.setup.startButton')}</Text>
+        <Text dimColor>{t('review.setup.startHint')}</Text>
       </Box>
     </Box>
   );

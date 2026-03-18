@@ -370,21 +370,21 @@ export function ReviewersTab({ config, isActive, onConfigChange }: Props): React
                 <Text color={isSel ? colors.selection.bg : undefined} bold={isSel}>{p}</Text>
               )}
             />
-            <Text dimColor>Enter: select  Esc: cancel</Text>
+            <Text dimColor>{t('config.provider.selectHint')}</Text>
           </Box>
         ) : mode === 'add-model' ? (
           <Box flexDirection="column">
-            <Text bold>Model</Text>
+            <Text bold>{t('config.detail.model')}</Text>
             <TextInput
               value={editState.model}
-              placeholder="Type model or Enter to browse"
+              placeholder={t('config.model.placeholder')}
               isActive={true}
             />
-            <Text dimColor>{t('config.detail.provider')}: {editState.provider}  |  Esc: cancel</Text>
+            <Text dimColor>{t('config.detail.provider')}: {editState.provider}  |  {t('config.edit.cancel')}</Text>
           </Box>
         ) : mode === 'edit' && selectedEntry && isStaticReviewer(selectedEntry) ? (
           <Box flexDirection="column">
-            <Text bold color={colors.primary}>Edit {selectedEntry.id}</Text>
+            <Text bold color={colors.primary}>{t('config.help.edit')} {selectedEntry.id}</Text>
             <Box marginTop={1} flexDirection="column">
               {EDIT_FIELDS.map((field, fi) => {
                 const isActiveField = editState.activeField === fi;
@@ -399,7 +399,7 @@ export function ReviewersTab({ config, isActive, onConfigChange }: Props): React
                     {isCycleField ? (
                       <Text color={isActiveField ? colors.primary : undefined}>
                         {value}
-                        {isActiveField ? <Text dimColor> (j/k to cycle)</Text> : null}
+                        {isActiveField ? <Text dimColor> {t('config.edit.cycleHint')}</Text> : null}
                       </Text>
                     ) : (
                       <TextInput value={value} isActive={isActiveField} />
@@ -409,7 +409,7 @@ export function ReviewersTab({ config, isActive, onConfigChange }: Props): React
               })}
             </Box>
             <Box marginTop={1}>
-              <Text dimColor>Tab: next field  Enter: save  Esc: cancel</Text>
+              <Text dimColor>{t('config.edit.hints')}</Text>
             </Box>
           </Box>
         ) : selectedEntry ? (
@@ -418,14 +418,17 @@ export function ReviewersTab({ config, isActive, onConfigChange }: Props): React
             <Box marginTop={1}>
               <Text dimColor>
                 {isAutoReviewer(selectedEntry)
-                  ? 'Auto-selected by L0'
-                  : `[e] ${t('config.help.edit')}  [Space] ${t('config.help.toggle')}  [c] clone  [d] ${t('config.help.delete')}`
+                  ? t('config.reviewer.autoSelected')
+                  : t('config.reviewer.hints')
+                      .replace('{edit}', t('config.help.edit'))
+                      .replace('{toggle}', t('config.help.toggle'))
+                      .replace('{delete}', t('config.help.delete'))
                 }
               </Text>
             </Box>
           </Box>
         ) : (
-          <Text dimColor>No reviewer selected</Text>
+          <Text dimColor>{t('config.reviewer.noSelected')}</Text>
         )}
       </Panel>
     </Box>

@@ -133,7 +133,7 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
   // ---- Provider selection ----
   if (step === 'provider') {
     return (
-      <Panel title={`${t('config.tabs.apiKeys')} — Select Provider`} width={totalWidth}>
+      <Panel title={`${t('config.tabs.apiKeys')} — ${t('config.apiKeys.selectProvider')}`} width={totalWidth}>
         <ScrollableList
           items={PROVIDERS}
           selectedIndex={providerIndex}
@@ -154,7 +154,7 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
           }}
         />
         <Box marginTop={1}>
-          <Text dimColor>Enter: set key  h: health check  t: test all  Esc: back</Text>
+          <Text dimColor>{t('config.apiKeys.enterHints')}</Text>
         </Box>
       </Panel>
     );
@@ -169,7 +169,7 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
           <TextInput value={keyInput} mask={true} isActive={true} />
         </Box>
         <Box marginTop={1}>
-          <Text dimColor>Enter: save & test  Esc: back</Text>
+          <Text dimColor>{t('config.apiKeys.saveHints')}</Text>
         </Box>
       </Panel>
     );
@@ -179,7 +179,7 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
   if (step === 'testing') {
     return (
       <Panel title={`${t('config.tabs.apiKeys')} — ${selectedProvider}`} width={totalWidth}>
-        <Text color={colors.warning}>Testing connection...</Text>
+        <Text color={colors.warning}>{t('config.apiKeys.testingConnection')}</Text>
       </Panel>
     );
   }
@@ -190,12 +190,12 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
       <Panel title={`${t('config.tabs.apiKeys')} — ${selectedProvider}`} width={totalWidth}>
         {testResult?.ok ? (
           <Text color={colors.success}>
-            {icons.check} {testResult.provider} connected ({testResult.latencyMs}ms)
+            {icons.check} {t('config.apiKeys.connected').replace('{provider}', testResult.provider).replace('{latency}', String(testResult.latencyMs))}
           </Text>
         ) : (
           <Box flexDirection="column">
             <Text color={colors.error}>
-              {icons.cross} {testResult?.error ?? 'Connection failed'}
+              {icons.cross} {testResult?.error ?? t('config.apiKeys.failed')}
             </Text>
           </Box>
         )}
@@ -203,7 +203,7 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
           <Text dimColor>{getCredentialsPath()}</Text>
         </Box>
         <Box marginTop={1}>
-          <Text dimColor>r: retry  Enter/Esc: back to providers</Text>
+          <Text dimColor>{t('config.apiKeys.retryHints')}</Text>
         </Box>
       </Panel>
     );
@@ -212,8 +212,8 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
   // ---- Bulk testing ----
   if (step === 'bulk-testing') {
     return (
-      <Panel title={`${t('config.tabs.apiKeys')} — Health Check All`} width={totalWidth}>
-        <Text color={colors.warning}>Testing all configured providers... {bulkProgress}</Text>
+      <Panel title={`${t('config.tabs.apiKeys')} — ${t('config.apiKeys.healthCheckAll')}`} width={totalWidth}>
+        <Text color={colors.warning}>{t('config.apiKeys.testingAll')} {bulkProgress}</Text>
         <Box marginTop={1} flexDirection="column">
           {bulkResults.map(r => (
             <Box key={r.provider}>
@@ -234,7 +234,7 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
 
   // ---- Bulk results ----
   return (
-    <Panel title={`${t('config.tabs.apiKeys')} — Health Check Results`} width={totalWidth}>
+    <Panel title={`${t('config.tabs.apiKeys')} — ${t('config.apiKeys.healthCheckResults')}`} width={totalWidth}>
       <Box flexDirection="column">
         {bulkResults.map(r => (
           <Box key={r.provider}>
@@ -251,13 +251,13 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
       </Box>
       <Box marginTop={1}>
         <Toast
-          message={`${bulkResults.filter(r => r.ok).length}/${bulkResults.length} providers healthy`}
+          message={t('config.apiKeys.healthSummary').replace('{ok}', String(bulkResults.filter(r => r.ok).length)).replace('{total}', String(bulkResults.length))}
           type={bulkResults.every(r => r.ok) ? 'success' : 'error'}
           visible={true}
         />
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>Enter/Esc: back to providers</Text>
+        <Text dimColor>{t('config.apiKeys.continueHints')}</Text>
       </Box>
     </Panel>
   );

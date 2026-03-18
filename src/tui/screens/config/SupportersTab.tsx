@@ -175,7 +175,7 @@ export function SupportersTab({ config, isActive, onConfigChange }: Props): Reac
           <Box flexDirection="column">
             <Text bold>{t('config.pool.pickCount')}</Text>
             <TextInput value={pickCountInput} isActive={true} />
-            <Text dimColor>Enter: save  Esc: cancel</Text>
+            <Text dimColor>{t('config.edit.save')}  {t('config.edit.cancel')}</Text>
           </Box>
         ) : selectedItem ? (
           <Box flexDirection="column">
@@ -190,19 +190,17 @@ export function SupportersTab({ config, isActive, onConfigChange }: Props): Reac
             ) : null}
 
             <Box marginTop={1} flexDirection="column">
-              <Text dimColor bold>{icons.separator} Pool Settings</Text>
+              <Text dimColor bold>{icons.separator} {t('config.supporter.poolSettings')}</Text>
               <DetailRow label={t('config.pool.pickCount')} value={String(config.supporters.pickCount)} labelWidth={14} />
               <DetailRow label={t('config.pool.pickStrategy')} value={config.supporters.pickStrategy} labelWidth={14} />
             </Box>
 
             <Box marginTop={1}>
-              <Text dimColor>
-                [Space] toggle  [d] delete  [p] pickCount  [s] strategy
-              </Text>
+              <Text dimColor>{t('config.supporter.hints')}</Text>
             </Box>
           </Box>
         ) : (
-          <Text dimColor>No supporter selected</Text>
+          <Text dimColor>{t('config.supporter.noSelected')}</Text>
         )}
       </Panel>
     </Box>

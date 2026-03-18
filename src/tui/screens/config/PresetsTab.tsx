@@ -183,18 +183,18 @@ export function PresetsTab({ config, isActive, onConfigChange }: Props): React.J
       </Panel>
 
       {/* Right: preview */}
-      <Panel title="Preview" width={detailWidth}>
+      <Panel title={t('presets.preview')} width={detailWidth}>
         {selectedPreset ? (
           <Box flexDirection="column">
             <Text bold color={colors.primary}>{selectedPreset.name}</Text>
             <Text dimColor>{selectedPreset.description}</Text>
             <Box marginTop={1} flexDirection="column">
               <Box>
-                <Text dimColor>{'Reviewers:'.padEnd(14)}</Text>
+                <Text dimColor>{t('presets.reviewers').padEnd(14)}</Text>
                 <Text>{selectedPreset.reviewerCount}</Text>
               </Box>
               <Box>
-                <Text dimColor>{'Providers:'.padEnd(14)}</Text>
+                <Text dimColor>{t('presets.providers').padEnd(14)}</Text>
                 {selectedPreset.providers.map((p, i) => {
                   const available = isProviderAvailable(p);
                   return (
@@ -209,8 +209,8 @@ export function PresetsTab({ config, isActive, onConfigChange }: Props): React.J
                 })}
               </Box>
               <Box>
-                <Text dimColor>{'Supporters:'.padEnd(14)}</Text>
-                <Text>1 + Devil&apos;s Advocate</Text>
+                <Text dimColor>{t('presets.supporters').padEnd(14)}</Text>
+                <Text>{t('presets.supportersValue')}</Text>
               </Box>
             </Box>
             {(() => {
@@ -219,7 +219,7 @@ export function PresetsTab({ config, isActive, onConfigChange }: Props): React.J
                 return (
                   <Box marginTop={1}>
                     <Text color={colors.warning}>
-                      {icons.cross} Missing API keys: {missing.join(', ')}
+                      {icons.cross} {t('presets.missingKeys').replace('{keys}', missing.join(', '))}
                     </Text>
                   </Box>
                 );
@@ -227,7 +227,7 @@ export function PresetsTab({ config, isActive, onConfigChange }: Props): React.J
               return null;
             })()}
             <Box marginTop={1}>
-              <Text dimColor>Enter/Space: apply</Text>
+              <Text dimColor>{t('presets.apply')}</Text>
             </Box>
           </Box>
         ) : null}
