@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { PROVIDER_ENV_VARS } from '../../../providers/env-vars.js';
 import { saveCredential, getCredentialsPath } from '../../../config/credentials.js';
+import { Panel } from '../../components/Panel.js';
+import { ScrollableList } from '../../components/ScrollableList.js';
+import { TextInput } from '../../components/TextInput.js';
+import { Toast } from '../../components/Toast.js';
+import { colors, icons, getTerminalSize } from '../../theme.js';
+import { t } from '../../../i18n/index.js';
 
 // ============================================================================
 // Types
@@ -30,10 +36,7 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
 
   useInput((input, key) => {
     if (step === 'provider') {
-      if (key.escape) {
-        onDone();
-        return;
-      }
+      if (key.escape) { onDone(); return; }
       if (key.upArrow || input === 'k') {
         setProviderIndex(i => Math.max(0, i - 1));
       } else if (key.downArrow || input === 'j') {
@@ -45,26 +48,16 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
     }
 
     if (step === 'key-input') {
-      if (key.escape) {
-        setStep('provider');
-        setKeyInput('');
-        return;
-      }
+      if (key.escape) { setStep('provider'); setKeyInput(''); return; }
       if (key.return) {
         if (!keyInput.trim()) return;
-        // Save to ~/.config/codeagora/credentials
         saveCredential(envVarName, keyInput.trim());
-        // Set in current process for immediate use
         process.env[envVarName] = keyInput.trim();
         setStep('testing');
-        // Run ping test asynchronously
         runPingTest(selectedProvider, keyInput.trim());
         return;
       }
-      if (key.backspace || key.delete) {
-        setKeyInput(s => s.slice(0, -1));
-        return;
-      }
+      if (key.backspace || key.delete) { setKeyInput(s => s.slice(0, -1)); return; }
       if (input && !key.return) {
         const clean = input.replace(/[\x00-\x1F\x7F]/g, '');
         if (clean) setKeyInput(s => s + clean);
@@ -73,20 +66,16 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
     }
 
     if (step === 'result') {
-      if (key.return || key.escape || input === 'q') {
-        onDone();
-      }
+      if (key.return || key.escape || input === 'q') { onDone(); }
     }
   });
 
   async function runPingTest(provider: string, _apiKey: string): Promise<void> {
     const start = Date.now();
     try {
-      // Dynamic import to avoid loading heavy deps at component load
       const { getModel } = await import('../../../l1/provider-registry.js');
       const { generateText } = await import('ai');
 
-      // Pick a small/default model per provider for testing
       const testModels: Record<string, string> = {
         groq: 'llama-3.3-70b-versatile',
         'nvidia-nim': 'deepseek-r1',
@@ -117,80 +106,71 @@ export function EnvSetup({ onDone }: Props): React.JSX.Element {
     setStep('result');
   }
 
+  const { cols } = getTerminalSize();
+  const totalWidth = Math.max(cols - 4, 40);
+
   if (step === 'provider') {
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold>API Key Setup</Text>
-        <Text dimColor>Select a provider to configure:</Text>
-        <Box marginTop={1} flexDirection="column">
-          {PROVIDERS.map((p, i) => {
+      <Panel title={`${t('config.tabs.apiKeys')} — Select Provider`} width={totalWidth}>
+        <ScrollableList
+          items={PROVIDERS}
+          selectedIndex={providerIndex}
+          height={Math.max(getTerminalSize().rows - 8, 8)}
+          renderItem={(p, _i, isSelected) => {
             const envVar = PROVIDER_ENV_VARS[p] ?? '';
             const hasKey = Boolean(process.env[envVar]);
             return (
-              <Box key={p}>
-                <Text color={i === providerIndex ? 'cyan' : undefined} bold={i === providerIndex}>
-                  {i === providerIndex ? '> ' : '  '}{p}
-                </Text>
+              <Text color={isSelected ? colors.selection.bg : undefined} bold={isSelected}>
+                {p}
                 <Text dimColor> ({envVar})</Text>
-                {hasKey && <Text color="green"> [set]</Text>}
-              </Box>
+                {hasKey ? <Text color={colors.success}> {icons.check}</Text> : null}
+              </Text>
             );
-          })}
-        </Box>
+          }}
+        />
         <Box marginTop={1}>
-          <Text dimColor>j/k: navigate | Enter: select | Esc: back</Text>
+          <Text dimColor>Enter: select  Esc: back</Text>
         </Box>
-      </Box>
+      </Panel>
     );
   }
 
   if (step === 'key-input') {
-    const masked = keyInput.length > 4
-      ? '*'.repeat(keyInput.length - 4) + keyInput.slice(-4)
-      : keyInput;
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold>API Key Setup - {selectedProvider}</Text>
-        <Box marginTop={1}>
-          <Text>{envVarName}: </Text>
-          <Text color="cyan">{masked}</Text>
-          <Text color="gray">_</Text>
+      <Panel title={`${t('config.tabs.apiKeys')} — ${selectedProvider}`} width={totalWidth}>
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>{envVarName}:</Text>
+          <TextInput value={keyInput} mask={true} isActive={true} />
         </Box>
         <Box marginTop={1}>
-          <Text dimColor>Enter: save and test | Esc: back</Text>
+          <Text dimColor>Enter: save & test  Esc: back</Text>
         </Box>
-      </Box>
+      </Panel>
     );
   }
 
   if (step === 'testing') {
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold>API Key Setup - {selectedProvider}</Text>
-        <Box marginTop={1}>
-          <Text color="yellow">Testing connection...</Text>
-        </Box>
-      </Box>
+      <Panel title={`${t('config.tabs.apiKeys')} — ${selectedProvider}`} width={totalWidth}>
+        <Text color={colors.warning}>Testing connection...</Text>
+      </Panel>
     );
   }
 
-  // step === 'result'
+  // result
   return (
-    <Box flexDirection="column" paddingX={1}>
-      <Text bold>API Key Setup - {selectedProvider}</Text>
+    <Panel title={`${t('config.tabs.apiKeys')} — ${selectedProvider}`} width={totalWidth}>
+      <Toast
+        message={testResult?.message ?? ''}
+        type={testResult?.ok ? 'success' : 'error'}
+        visible={true}
+      />
       <Box marginTop={1}>
-        {testResult?.ok ? (
-          <Text color="green">{'\u2713'} {testResult.message}</Text>
-        ) : (
-          <Text color="red">{'\u2717'} {testResult?.message ?? 'Unknown error'}</Text>
-        )}
+        <Text dimColor>{getCredentialsPath()}</Text>
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>{getCredentialsPath()} updated with {envVarName}</Text>
+        <Text dimColor>Enter/Esc: continue</Text>
       </Box>
-      <Box marginTop={1}>
-        <Text dimColor>Press Enter or Esc to continue</Text>
-      </Box>
-    </Box>
+    </Panel>
   );
 }

@@ -163,14 +163,15 @@ describe('ReviewersTab', () => {
     unmount();
   });
 
-  it('shows ON/OFF status for each reviewer', async () => {
+  it('shows enabled/disabled status for each reviewer', async () => {
     const { ReviewersTab } = await import('../tui/screens/config/ReviewersTab.js');
     const { lastFrame, unmount } = render(
       <ReviewersTab config={mockConfig} isActive={true} onConfigChange={() => {}} />
     );
     const frame = lastFrame() ?? '';
-    expect(frame).toContain('ON');
-    expect(frame).toContain('OFF');
+    // r1 is enabled (●), r2 is disabled (○)
+    expect(frame).toContain('\u25cf'); // ● enabled
+    expect(frame).toContain('\u25cb'); // ○ disabled
     unmount();
   });
 });
@@ -193,8 +194,8 @@ describe('SupportersTab', () => {
       <SupportersTab config={mockConfig} isActive={true} onConfigChange={() => {}} />
     );
     const frame = lastFrame() ?? '';
-    expect(frame).toContain('pickCount');
-    expect(frame).toContain('pickStrategy');
+    expect(frame).toContain('Pick Count');
+    expect(frame).toContain('Pick Strategy');
     unmount();
   });
 });

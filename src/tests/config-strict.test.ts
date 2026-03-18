@@ -10,12 +10,14 @@ function makeConfig(overrides?: Record<string, unknown>): Config {
   return {
     reviewers: [
       { id: 'r1', backend: 'api', model: 'test', provider: 'groq', timeout: 120, enabled: true },
+      { id: 'r2', backend: 'api', model: 'test', provider: 'groq', timeout: 120, enabled: true },
+      { id: 'r3', backend: 'api', model: 'test', provider: 'groq', timeout: 120, enabled: true },
     ],
     supporters: {
       pool: [
         { id: 's1', backend: 'api', model: 'test', provider: 'groq', timeout: 120, enabled: true },
       ],
-      pickCount: 2,
+      pickCount: 1,
       pickStrategy: 'random',
       devilsAdvocate: {
         id: 'da1',

@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { Config } from '../../../types/config.js';
+import { Panel } from '../../components/Panel.js';
+import { ScrollableList } from '../../components/ScrollableList.js';
+import { colors, icons, getTerminalSize } from '../../theme.js';
 import { t } from '../../../i18n/index.js';
+
+// ============================================================================
+// Preset Definitions
+// ============================================================================
 
 interface PresetDef {
   name: string;
   description: string;
+  reviewerCount: number;
+  providers: string[];
   build: () => Partial<Config>;
 }
 
@@ -13,6 +22,8 @@ const PRESETS: PresetDef[] = [
   {
     name: 'Quick Setup',
     description: '3 Groq reviewers + 1 supporter',
+    reviewerCount: 3,
+    providers: ['groq'],
     build: () => ({
       reviewers: [
         { id: 'r1', model: 'llama-3.3-70b-versatile', backend: 'api' as const, provider: 'groq', enabled: true, timeout: 120 },
@@ -25,14 +36,7 @@ const PRESETS: PresetDef[] = [
         ],
         pickCount: 1,
         pickStrategy: 'random' as const,
-        devilsAdvocate: {
-          id: 'da',
-          model: 'llama-3.3-70b-versatile',
-          backend: 'api' as const,
-          provider: 'groq',
-          enabled: true,
-          timeout: 120,
-        },
+        devilsAdvocate: { id: 'da', model: 'llama-3.3-70b-versatile', backend: 'api' as const, provider: 'groq', enabled: true, timeout: 120 },
         personaPool: ['.ca/personas/strict.md'],
         personaAssignment: 'random' as const,
       },
@@ -41,6 +45,8 @@ const PRESETS: PresetDef[] = [
   {
     name: 'Diversity',
     description: 'Groq + Google + Mistral mix',
+    reviewerCount: 3,
+    providers: ['groq', 'google', 'mistral'],
     build: () => ({
       reviewers: [
         { id: 'r1', model: 'llama-3.3-70b-versatile', backend: 'api' as const, provider: 'groq', enabled: true, timeout: 120 },
@@ -53,14 +59,7 @@ const PRESETS: PresetDef[] = [
         ],
         pickCount: 1,
         pickStrategy: 'random' as const,
-        devilsAdvocate: {
-          id: 'da',
-          model: 'mistral-large-latest',
-          backend: 'api' as const,
-          provider: 'mistral',
-          enabled: true,
-          timeout: 120,
-        },
+        devilsAdvocate: { id: 'da', model: 'mistral-large-latest', backend: 'api' as const, provider: 'mistral', enabled: true, timeout: 120 },
         personaPool: ['.ca/personas/strict.md'],
         personaAssignment: 'random' as const,
       },
@@ -69,6 +68,8 @@ const PRESETS: PresetDef[] = [
   {
     name: 'Minimal',
     description: '1 reviewer + 1 supporter',
+    reviewerCount: 1,
+    providers: ['groq'],
     build: () => ({
       reviewers: [
         { id: 'r1', model: 'llama-3.3-70b-versatile', backend: 'api' as const, provider: 'groq', enabled: true, timeout: 120 },
@@ -79,20 +80,17 @@ const PRESETS: PresetDef[] = [
         ],
         pickCount: 1,
         pickStrategy: 'random' as const,
-        devilsAdvocate: {
-          id: 'da',
-          model: 'llama-3.3-70b-versatile',
-          backend: 'api' as const,
-          provider: 'groq',
-          enabled: true,
-          timeout: 120,
-        },
+        devilsAdvocate: { id: 'da', model: 'llama-3.3-70b-versatile', backend: 'api' as const, provider: 'groq', enabled: true, timeout: 120 },
         personaPool: ['.ca/personas/strict.md'],
         personaAssignment: 'random' as const,
       },
     }),
   },
 ];
+
+// ============================================================================
+// Component
+// ============================================================================
 
 interface Props {
   config: Config;
@@ -103,12 +101,6 @@ interface Props {
 export function PresetsTab({ config, isActive, onConfigChange }: Props): React.JSX.Element {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [confirmIndex, setConfirmIndex] = useState<number | null>(null);
-  const [message, setMessage] = useState('');
-
-  function showMessage(msg: string): void {
-    setMessage(msg);
-    setTimeout(() => setMessage(''), 1500);
-  }
 
   function applyPreset(index: number): void {
     const preset = PRESETS[index];
@@ -116,7 +108,6 @@ export function PresetsTab({ config, isActive, onConfigChange }: Props): React.J
     const partial = preset.build();
     onConfigChange({ ...config, ...partial } as Config);
     setConfirmIndex(null);
-    showMessage(`Applied: ${preset.name} ✓`);
   }
 
   useInput((input, key) => {
@@ -125,7 +116,7 @@ export function PresetsTab({ config, isActive, onConfigChange }: Props): React.J
     if (confirmIndex !== null) {
       if (input === 'y' || input === 'Y') {
         applyPreset(confirmIndex);
-      } else if (input === 'n' || input === 'N' || key.escape) {
+      } else {
         setConfirmIndex(null);
       }
       return;
@@ -140,32 +131,66 @@ export function PresetsTab({ config, isActive, onConfigChange }: Props): React.J
     }
   });
 
-  if (confirmIndex !== null) {
-    const preset = PRESETS[confirmIndex]!;
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold color="yellow">Apply preset &quot;{preset.name}&quot;?</Text>
-        <Text>{t('config.presets.replaceWarning')}</Text>
-        <Text>Press <Text bold>y</Text> to confirm, <Text bold>n</Text> to cancel</Text>
-      </Box>
-    );
-  }
+  const { cols } = getTerminalSize();
+  const listWidth = Math.max(Math.floor((cols - 4) * 0.4), 20);
+  const detailWidth = Math.max((cols - 4) - listWidth - 2, 20);
+
+  const selectedPreset = PRESETS[selectedIndex];
 
   return (
-    <Box flexDirection="column" paddingX={1}>
-      <Text dimColor>j/k navigate  Enter/Space to apply</Text>
-      {PRESETS.map((preset, i) => {
-        const selected = i === selectedIndex;
-        return (
-          <Box key={preset.name} flexDirection="column" marginBottom={0}>
-            <Text backgroundColor={selected ? 'blue' : undefined}>
-              {selected ? '> ' : '  '}<Text bold>{preset.name}</Text>
+    <Box flexDirection="row">
+      {/* Left: preset list */}
+      <Panel title={t('config.tabs.presets')} width={listWidth}>
+        {confirmIndex !== null ? (
+          <Box flexDirection="column">
+            <Text color={colors.warning} bold>
+              {t('config.confirm.preset').replace('{name}', PRESETS[confirmIndex]?.name ?? '')}
             </Text>
-            <Text>    <Text dimColor>{preset.description}</Text></Text>
+            <Text dimColor>{t('config.presets.replaceWarning')}</Text>
           </Box>
-        );
-      })}
-      {message ? <Text color="green">{message}</Text> : null}
+        ) : (
+          <ScrollableList
+            items={PRESETS}
+            selectedIndex={selectedIndex}
+            height={10}
+            renderItem={(preset, _i, isSelected) => (
+              <Box flexDirection="column">
+                <Text color={isSelected ? colors.selection.bg : undefined} bold={isSelected}>
+                  {preset.name}
+                </Text>
+                <Text dimColor>{'  '}{preset.description}</Text>
+              </Box>
+            )}
+          />
+        )}
+      </Panel>
+
+      {/* Right: preview */}
+      <Panel title="Preview" width={detailWidth}>
+        {selectedPreset ? (
+          <Box flexDirection="column">
+            <Text bold color={colors.primary}>{selectedPreset.name}</Text>
+            <Text dimColor>{selectedPreset.description}</Text>
+            <Box marginTop={1} flexDirection="column">
+              <Box>
+                <Text dimColor>{'Reviewers:'.padEnd(14)}</Text>
+                <Text>{selectedPreset.reviewerCount}</Text>
+              </Box>
+              <Box>
+                <Text dimColor>{'Providers:'.padEnd(14)}</Text>
+                <Text>{selectedPreset.providers.join(', ')}</Text>
+              </Box>
+              <Box>
+                <Text dimColor>{'Supporters:'.padEnd(14)}</Text>
+                <Text>1 + Devil&apos;s Advocate</Text>
+              </Box>
+            </Box>
+            <Box marginTop={1}>
+              <Text dimColor>Enter/Space: apply</Text>
+            </Box>
+          </Box>
+        ) : null}
+      </Panel>
     </Box>
   );
 }

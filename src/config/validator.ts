@@ -31,9 +31,20 @@ export function strictValidateConfig(config: Config): ValidationResult {
   const warnings: string[] = [];
   const supportedProviders = getSupportedProviders();
 
-  // Validate reviewers array entries
+  // Reviewer count recommendations
   const { reviewers } = config;
   if (Array.isArray(reviewers)) {
+    const enabledReviewers = reviewers.filter(r => r.enabled !== false);
+    if (enabledReviewers.length > 10) {
+      warnings.push(
+        `${enabledReviewers.length} reviewers enabled — recommended max is 10. High counts increase API cost and latency.`
+      );
+    } else if (enabledReviewers.length < 3 && enabledReviewers.length > 0) {
+      warnings.push(
+        `Only ${enabledReviewers.length} reviewer(s) enabled — recommend at least 3 for diverse analysis.`
+      );
+    }
+
     for (const reviewer of reviewers) {
       if ('auto' in reviewer) continue; // AutoReviewerConfig — skip
 
@@ -87,6 +98,30 @@ export function strictValidateConfig(config: Config): ValidationResult {
         }
       }
     }
+  }
+
+  // Supporter pool recommendations
+  const { supporters } = config;
+  if (supporters) {
+    const enabledPool = supporters.pool.filter(s => s.enabled !== false);
+    if (enabledPool.length > 5) {
+      warnings.push(
+        `${enabledPool.length} supporters in pool — recommended max is 5. Only pickCount=${supporters.pickCount} are used per discussion.`
+      );
+    }
+    if (supporters.pickCount > enabledPool.length) {
+      warnings.push(
+        `pickCount (${supporters.pickCount}) exceeds enabled pool size (${enabledPool.length}) — some discussion rounds may have fewer supporters.`
+      );
+    }
+  }
+
+  // Discussion round recommendations
+  const { discussion } = config;
+  if (discussion && discussion.maxRounds > 5) {
+    warnings.push(
+      `maxRounds=${discussion.maxRounds} — recommended max is 5. High round counts increase latency without significant quality improvement.`
+    );
   }
 
   // Validate moderator

@@ -4,8 +4,18 @@ import type { Config, AgentConfig, ReviewerEntry } from '../../../types/config.j
 import { PROVIDER_ENV_VARS } from '../../../providers/env-vars.js';
 import { ModelSelector } from '../../components/ModelSelector.js';
 import type { SelectedModel } from '../../components/ModelSelector.js';
+import { Panel } from '../../components/Panel.js';
+import { ScrollableList } from '../../components/ScrollableList.js';
+import { TextInput } from '../../components/TextInput.js';
+import { colors, icons, statusColor, statusIcon, getTerminalSize } from '../../theme.js';
+import { t } from '../../../i18n/index.js';
+
+// ============================================================================
+// Helpers
+// ============================================================================
 
 const PROVIDERS = Object.keys(PROVIDER_ENV_VARS);
+const BACKENDS = ['api', 'opencode', 'codex', 'gemini', 'claude', 'copilot'] as const;
 
 function isAutoReviewer(entry: ReviewerEntry): boolean {
   return 'auto' in entry && entry.auto === true;
@@ -15,20 +25,22 @@ function isStaticReviewer(entry: ReviewerEntry): entry is AgentConfig {
   return !isAutoReviewer(entry);
 }
 
-interface AddFormState {
-  step: 'provider' | 'model';
-  providerIndex: number;
-  model: string;
-}
+// ============================================================================
+// Types
+// ============================================================================
 
-interface EditFormState {
+type Mode = 'list' | 'edit' | 'add-provider' | 'add-model' | 'model-selector' | 'confirm-delete';
+
+interface EditState {
+  provider: string;
   model: string;
+  backend: string;
   timeout: string;
+  persona: string;
+  activeField: number;
 }
 
-interface ConfirmState {
-  index: number;
-}
+const EDIT_FIELDS = ['provider', 'model', 'backend', 'timeout', 'persona'] as const;
 
 interface Props {
   config: Config;
@@ -36,21 +48,21 @@ interface Props {
   onConfigChange: (newConfig: Config) => void;
 }
 
+// ============================================================================
+// Component
+// ============================================================================
+
 export function ReviewersTab({ config, isActive, onConfigChange }: Props): React.JSX.Element {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [addForm, setAddForm] = useState<AddFormState | null>(null);
-  const [editForm, setEditForm] = useState<EditFormState | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<ConfirmState | null>(null);
-  const [message, setMessage] = useState<string>('');
-  const [showModelSelector, setShowModelSelector] = useState<'add' | 'edit' | null>(null);
+  const [mode, setMode] = useState<Mode>('list');
+  const [editState, setEditState] = useState<EditState>({
+    provider: '', model: '', backend: 'api', timeout: '120', persona: '', activeField: 0,
+  });
+  const [addProviderIndex, setAddProviderIndex] = useState(0);
 
   const reviewers = Array.isArray(config.reviewers) ? config.reviewers : [];
-  const _staticReviewers = reviewers.filter(isStaticReviewer) as AgentConfig[];
 
-  function showMessage(msg: string): void {
-    setMessage(msg);
-    setTimeout(() => setMessage(''), 1500);
-  }
+  // ---- Actions ----
 
   function toggleEnabled(index: number): void {
     const entry = reviewers[index];
@@ -60,287 +72,382 @@ export function ReviewersTab({ config, isActive, onConfigChange }: Props): React
       i === index ? { ...agent, enabled: !agent.enabled } : r
     );
     onConfigChange({ ...config, reviewers: updated });
-    showMessage('Saved ✓');
   }
 
   function deleteReviewer(index: number): void {
     const updated = reviewers.filter((_, i) => i !== index);
-    if (updated.length === 0) {
-      showMessage('Cannot delete — need at least 1 reviewer');
-      return;
-    }
+    if (updated.length === 0) return;
     onConfigChange({ ...config, reviewers: updated });
     setSelectedIndex(Math.max(0, index - 1));
-    setConfirmDelete(null);
-    showMessage('Saved ✓');
+    setMode('list');
   }
 
-  function addReviewer(form: AddFormState): void {
-    const provider = PROVIDERS[form.providerIndex] ?? 'groq';
+  function startEdit(index: number): void {
+    const entry = reviewers[index];
+    if (!entry || isAutoReviewer(entry)) return;
+    const agent = entry as AgentConfig;
+    setEditState({
+      provider: agent.provider ?? '',
+      model: agent.model,
+      backend: agent.backend,
+      timeout: String(agent.timeout ?? 120),
+      persona: agent.persona ?? '',
+      activeField: 0,
+    });
+    setMode('edit');
+  }
+
+  function saveEdit(index: number): void {
+    const entry = reviewers[index];
+    if (!entry || isAutoReviewer(entry)) return;
+    const agent = entry as AgentConfig;
+    const timeout = parseInt(editState.timeout, 10);
+    const updated = reviewers.map((r, i) =>
+      i === index
+        ? {
+            ...agent,
+            provider: editState.provider || agent.provider,
+            model: editState.model || agent.model,
+            backend: editState.backend as AgentConfig['backend'] || agent.backend,
+            timeout: isNaN(timeout) ? agent.timeout : timeout,
+            persona: editState.persona || undefined,
+          }
+        : r
+    );
+    onConfigChange({ ...config, reviewers: updated });
+    setMode('list');
+  }
+
+  function addReviewer(provider: string, model: string): void {
     const id = `r${reviewers.length + 1}`;
     const newReviewer: AgentConfig = {
       id,
-      model: form.model || 'llama-3.3-70b-versatile',
+      model: model || 'llama-3.3-70b-versatile',
       backend: 'api',
       provider,
       enabled: true,
       timeout: 120,
     };
     onConfigChange({ ...config, reviewers: [...reviewers, newReviewer] });
-    showMessage('Saved ✓');
+    setSelectedIndex(reviewers.length);
+    setMode('list');
   }
 
-  function saveEdit(index: number, form: EditFormState): void {
-    const entry = reviewers[index];
-    if (!entry || isAutoReviewer(entry)) return;
-    const agent = entry as AgentConfig;
-    const timeout = parseInt(form.timeout, 10);
-    const updated = reviewers.map((r, i) =>
-      i === index
-        ? { ...agent, model: form.model || agent.model, timeout: isNaN(timeout) ? agent.timeout : timeout }
-        : r
-    );
-    onConfigChange({ ...config, reviewers: updated });
-    setEditForm(null);
-    showMessage('Saved ✓');
-  }
+  // ---- Input handling ----
 
   useInput((input, key) => {
     if (!isActive) return;
 
-    // Confirm delete mode
-    if (confirmDelete !== null) {
+    // ---- Confirm delete ----
+    if (mode === 'confirm-delete') {
       if (input === 'y' || input === 'Y') {
-        deleteReviewer(confirmDelete.index);
-      } else if (input === 'n' || input === 'N' || key.escape) {
-        setConfirmDelete(null);
-      }
-      return;
-    }
-
-    // Add form mode
-    if (addForm !== null) {
-      if (addForm.step === 'provider') {
-        if (key.upArrow || input === 'k') {
-          setAddForm(f => f ? { ...f, providerIndex: Math.max(0, f.providerIndex - 1) } : f);
-        } else if (key.downArrow || input === 'j') {
-          setAddForm(f => f ? { ...f, providerIndex: Math.min(PROVIDERS.length - 1, f.providerIndex + 1) } : f);
-        } else if (key.return) {
-          setAddForm(f => f ? { ...f, step: 'model' } : f);
-        } else if (key.escape) {
-          setAddForm(null);
-        }
+        deleteReviewer(selectedIndex);
       } else {
-        // model step
-        if (key.return) {
-          if (addForm.model.trim()) {
-            addReviewer(addForm);
-            setAddForm(null);
-          } else {
-            // Empty model input -> open model selector
-            setShowModelSelector('add');
-          }
-        } else if (key.escape) {
-          setAddForm(null);
-        } else if (key.backspace || key.delete) {
-          setAddForm(f => f ? { ...f, model: f.model.slice(0, -1) } : f);
-        } else if (input) {
-          const clean = input.replace(/[\x00-\x1F\x7F]/g, '');
-          if (clean) setAddForm(f => f ? { ...f, model: f.model + clean } : f);
-        }
+        setMode('list');
       }
       return;
     }
 
-    // Edit form mode
-    if (editForm !== null) {
-      if (key.tab) {
-        // toggle between model and timeout fields via simple state flag — not needed, single field at a time
+    // ---- Add provider selection ----
+    if (mode === 'add-provider') {
+      if (key.upArrow || input === 'k') {
+        setAddProviderIndex(i => Math.max(0, i - 1));
+      } else if (key.downArrow || input === 'j') {
+        setAddProviderIndex(i => Math.min(PROVIDERS.length - 1, i + 1));
       } else if (key.return) {
-        saveEdit(selectedIndex, editForm);
+        setEditState(s => ({ ...s, model: '', provider: PROVIDERS[addProviderIndex] ?? 'groq' }));
+        setMode('add-model');
       } else if (key.escape) {
-        setEditForm(null);
+        setMode('list');
+      }
+      return;
+    }
+
+    // ---- Add model input ----
+    if (mode === 'add-model') {
+      if (key.return) {
+        if (editState.model.trim()) {
+          addReviewer(editState.provider, editState.model.trim());
+        } else {
+          setMode('model-selector');
+        }
+      } else if (key.escape) {
+        setMode('list');
       } else if (key.backspace || key.delete) {
-        setEditForm(f => f ? { ...f, model: f.model.slice(0, -1) } : f);
+        setEditState(s => ({ ...s, model: s.model.slice(0, -1) }));
       } else if (input) {
         const clean = input.replace(/[\x00-\x1F\x7F]/g, '');
-        if (clean) setEditForm(f => f ? { ...f, model: f.model + clean } : f);
+        if (clean) setEditState(s => ({ ...s, model: s.model + clean }));
       }
       return;
     }
 
-    // Normal navigation
+    // ---- Edit mode ----
+    if (mode === 'edit') {
+      if (key.return) {
+        saveEdit(selectedIndex);
+        return;
+      }
+      if (key.escape) {
+        setMode('list');
+        return;
+      }
+      if (key.tab) {
+        setEditState(s => ({
+          ...s,
+          activeField: (s.activeField + 1) % EDIT_FIELDS.length,
+        }));
+        return;
+      }
+
+      const field = EDIT_FIELDS[editState.activeField]!;
+
+      // Provider/backend: cycle with j/k
+      if (field === 'provider') {
+        if (key.upArrow || input === 'k') {
+          const idx = PROVIDERS.indexOf(editState.provider);
+          const prev = (idx - 1 + PROVIDERS.length) % PROVIDERS.length;
+          setEditState(s => ({ ...s, provider: PROVIDERS[prev]! }));
+        } else if (key.downArrow || input === 'j') {
+          const idx = PROVIDERS.indexOf(editState.provider);
+          const next = (idx + 1) % PROVIDERS.length;
+          setEditState(s => ({ ...s, provider: PROVIDERS[next]! }));
+        }
+        return;
+      }
+
+      if (field === 'backend') {
+        if (key.upArrow || input === 'k' || key.downArrow || input === 'j') {
+          const idx = BACKENDS.indexOf(editState.backend as typeof BACKENDS[number]);
+          const next = (idx + 1) % BACKENDS.length;
+          setEditState(s => ({ ...s, backend: BACKENDS[next]! }));
+        }
+        return;
+      }
+
+      // Text fields: model, timeout, persona
+      if (key.backspace || key.delete) {
+        setEditState(s => ({ ...s, [field]: (s[field as keyof EditState] as string).slice(0, -1) }));
+      } else if (input) {
+        const clean = input.replace(/[\x00-\x1F\x7F]/g, '');
+        if (clean) setEditState(s => ({ ...s, [field]: (s[field as keyof EditState] as string) + clean }));
+      }
+      return;
+    }
+
+    // ---- List mode ----
     if (key.upArrow || input === 'k') {
       setSelectedIndex(i => Math.max(0, i - 1));
     } else if (key.downArrow || input === 'j') {
       setSelectedIndex(i => Math.min(reviewers.length - 1, i + 1));
     } else if (input === ' ') {
       toggleEnabled(selectedIndex);
-    } else if (input === 'd') {
-      if (reviewers[selectedIndex] && !isAutoReviewer(reviewers[selectedIndex]!)) {
-        setConfirmDelete({ index: selectedIndex });
-      }
-    } else if (input === 'a') {
-      setAddForm({ step: 'provider', providerIndex: 0, model: '' });
     } else if (input === 'e') {
-      const entry = reviewers[selectedIndex];
-      if (entry && isStaticReviewer(entry)) {
-        setEditForm({ model: entry.model, timeout: String(entry.timeout ?? 120) });
-        setShowModelSelector('edit');
+      startEdit(selectedIndex);
+    } else if (input === 'a') {
+      setAddProviderIndex(0);
+      setMode('add-provider');
+    } else if (input === 'd') {
+      if (reviewers.length > 1 && reviewers[selectedIndex] && !isAutoReviewer(reviewers[selectedIndex]!)) {
+        setMode('confirm-delete');
       }
     }
   });
 
-  // Render model selector for add
-  if (showModelSelector === 'add' && addForm !== null) {
+  // ---- Model selector ----
+  if (mode === 'model-selector') {
     return (
       <ModelSelector
         source="all"
         onSelect={(model: SelectedModel) => {
-          setAddForm(f => f ? { ...f, model: model.id.split('/').pop() ?? model.id } : f);
-          setShowModelSelector(null);
-          // Immediately add the reviewer
-          const provider = PROVIDERS[addForm.providerIndex] ?? 'groq';
-          const id = `r${reviewers.length + 1}`;
-          const newReviewer: AgentConfig = {
-            id,
-            model: model.id.split('/').pop() ?? model.id,
-            backend: 'api',
-            provider,
-            enabled: true,
-            timeout: 120,
-          };
-          onConfigChange({ ...config, reviewers: [...reviewers, newReviewer] });
-          setAddForm(null);
-          showMessage('Saved \u2713');
+          addReviewer(editState.provider, model.id.split('/').pop() ?? model.id);
         }}
-        onCancel={() => {
-          setShowModelSelector(null);
-        }}
+        onCancel={() => setMode('list')}
       />
     );
   }
 
-  // Render model selector for edit
-  if (showModelSelector === 'edit') {
-    return (
-      <ModelSelector
-        source="all"
-        onSelect={(model: SelectedModel) => {
-          const entry = reviewers[selectedIndex];
-          if (entry && isStaticReviewer(entry)) {
-            const agent = entry as AgentConfig;
-            const updated = reviewers.map((r, i) =>
-              i === selectedIndex
-                ? { ...agent, model: model.id.split('/').pop() ?? model.id }
-                : r
-            );
-            onConfigChange({ ...config, reviewers: updated });
-            showMessage('Saved \u2713');
-          }
-          setShowModelSelector(null);
-          setEditForm(null);
-        }}
-        onCancel={() => {
-          setShowModelSelector(null);
-          setEditForm(null);
-        }}
-      />
-    );
-  }
-
-  // Render confirm delete
-  if (confirmDelete !== null) {
-    const entry = reviewers[confirmDelete.index] as AgentConfig | undefined;
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold color="red">Delete reviewer &quot;{entry?.id}&quot;?</Text>
-        <Text>Press <Text bold>y</Text> to confirm, <Text bold>n</Text> to cancel</Text>
-      </Box>
-    );
-  }
-
-  // Render add form
-  if (addForm !== null) {
-    if (addForm.step === 'provider') {
-      return (
-        <Box flexDirection="column" paddingX={1}>
-          <Text bold>Select provider (j/k, Enter):</Text>
-          {PROVIDERS.map((p, i) => (
-            <Text key={p} color={i === addForm.providerIndex ? 'cyan' : undefined}>
-              {i === addForm.providerIndex ? '> ' : '  '}{p}
-            </Text>
-          ))}
-          <Text dimColor>Esc to cancel</Text>
-        </Box>
-      );
-    }
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold>Model name (Enter to confirm, empty Enter to browse):</Text>
-        <Text>&gt; {addForm.model}<Text color="cyan">_</Text></Text>
-        <Text dimColor>Provider: {PROVIDERS[addForm.providerIndex]}  |  Esc to cancel</Text>
-      </Box>
-    );
-  }
-
-  // Render edit form
-  if (editForm !== null) {
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold>Edit model (Enter to save):</Text>
-        <Text>&gt; {editForm.model}<Text color="cyan">_</Text></Text>
-        <Text dimColor>Esc to cancel</Text>
-      </Box>
-    );
-  }
-
+  // ---- Declarative config ----
   if (!Array.isArray(config.reviewers)) {
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text bold color="yellow">Declarative reviewers config</Text>
+      <Panel title={t('config.tabs.reviewers')}>
+        <Text color={colors.warning}>Declarative reviewers config</Text>
         <Text>count: {(config.reviewers as { count: number }).count}</Text>
         <Text dimColor>Edit .ca/config.json directly to change declarative settings.</Text>
-      </Box>
+      </Panel>
     );
   }
 
+  // ---- Empty ----
   if (reviewers.length === 0) {
     return (
-      <Box flexDirection="column" paddingX={1}>
+      <Panel title={t('config.tabs.reviewers')}>
         <Text dimColor>No reviewers. Press <Text bold>a</Text> to add one.</Text>
-        {message ? <Text color="green">{message}</Text> : null}
+      </Panel>
+    );
+  }
+
+  const { cols } = getTerminalSize();
+  const listWidth = Math.max(Math.floor((cols - 4) * 0.4), 20);
+  const detailWidth = Math.max((cols - 4) - listWidth - 2, 20);
+
+  const selectedEntry = reviewers[selectedIndex];
+
+  return (
+    <Box flexDirection="row">
+      {/* Left panel: reviewer list */}
+      <Panel title={`${t('config.tabs.reviewers')} (${reviewers.length})`} width={listWidth}>
+        <ScrollableList
+          items={reviewers}
+          selectedIndex={selectedIndex}
+          height={Math.max(getTerminalSize().rows - 8, 6)}
+          renderItem={(entry, _i, isSelected) => {
+            const isAuto = isAutoReviewer(entry);
+            const agent = isAuto ? null : (entry as AgentConfig);
+            const enabled = entry.enabled ?? true;
+            return (
+              <Text
+                color={isSelected ? colors.selection.bg : undefined}
+                bold={isSelected}
+              >
+                {statusIcon(enabled)} {entry.id}
+                {'  '}
+                {isAuto
+                  ? <Text color={colors.warning}>[Auto]</Text>
+                  : <Text dimColor>{agent?.provider}/{agent?.model?.slice(0, 20)}</Text>
+                }
+              </Text>
+            );
+          }}
+        />
+      </Panel>
+
+      {/* Right panel: detail / edit / confirm */}
+      <Panel title={t('config.detail.title')} width={detailWidth}>
+        {mode === 'confirm-delete' && selectedEntry ? (
+          <Box flexDirection="column">
+            <Text color={colors.error} bold>
+              {t('config.confirm.delete').replace('{id}', selectedEntry.id)}
+            </Text>
+          </Box>
+        ) : mode === 'add-provider' ? (
+          <Box flexDirection="column">
+            <Text bold>{t('config.detail.provider')}</Text>
+            <ScrollableList
+              items={PROVIDERS}
+              selectedIndex={addProviderIndex}
+              height={Math.max(getTerminalSize().rows - 10, 6)}
+              renderItem={(p, _i, isSel) => (
+                <Text color={isSel ? colors.selection.bg : undefined} bold={isSel}>{p}</Text>
+              )}
+            />
+            <Text dimColor>Enter: select  Esc: cancel</Text>
+          </Box>
+        ) : mode === 'add-model' ? (
+          <Box flexDirection="column">
+            <Text bold>Model</Text>
+            <TextInput
+              value={editState.model}
+              placeholder="Type model or Enter to browse"
+              isActive={true}
+            />
+            <Text dimColor>{t('config.detail.provider')}: {editState.provider}  |  Esc: cancel</Text>
+          </Box>
+        ) : mode === 'edit' && selectedEntry && isStaticReviewer(selectedEntry) ? (
+          <Box flexDirection="column">
+            <Text bold color={colors.primary}>Edit {selectedEntry.id}</Text>
+            <Box marginTop={1} flexDirection="column">
+              {EDIT_FIELDS.map((field, fi) => {
+                const isActiveField = editState.activeField === fi;
+                const value = editState[field as keyof EditState] as string;
+                const label = t(`config.detail.${field}`);
+                const isCycleField = field === 'provider' || field === 'backend';
+                return (
+                  <Box key={field}>
+                    <Text color={isActiveField ? colors.primary : colors.muted} bold={isActiveField}>
+                      {isActiveField ? icons.arrow : ' '} {label.padEnd(10)}
+                    </Text>
+                    {isCycleField ? (
+                      <Text color={isActiveField ? colors.primary : undefined}>
+                        {value}
+                        {isActiveField ? <Text dimColor> (j/k to cycle)</Text> : null}
+                      </Text>
+                    ) : (
+                      <TextInput value={value} isActive={isActiveField} />
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
+            <Box marginTop={1}>
+              <Text dimColor>Tab: next field  Enter: save  Esc: cancel</Text>
+            </Box>
+          </Box>
+        ) : selectedEntry ? (
+          <Box flexDirection="column">
+            {renderDetailView(selectedEntry)}
+            <Box marginTop={1}>
+              <Text dimColor>
+                {isAutoReviewer(selectedEntry)
+                  ? 'Auto-selected by L0'
+                  : `[e] ${t('config.help.edit')}  [Space] ${t('config.help.toggle')}  [d] ${t('config.help.delete')}`
+                }
+              </Text>
+            </Box>
+          </Box>
+        ) : (
+          <Text dimColor>No reviewer selected</Text>
+        )}
+      </Panel>
+    </Box>
+  );
+}
+
+// ============================================================================
+// Detail View
+// ============================================================================
+
+function renderDetailView(entry: ReviewerEntry): React.JSX.Element {
+  const isAuto = 'auto' in entry && entry.auto === true;
+  const enabled = entry.enabled ?? true;
+
+  if (isAuto) {
+    return (
+      <Box flexDirection="column">
+        <DetailRow label={t('config.detail.id')} value={entry.id} />
+        <DetailRow label={t('config.detail.status')} value={enabled ? t('config.detail.enabled') : t('config.detail.disabled')} color={statusColor(enabled)} />
+        <DetailRow label="Type" value="Auto (L0 Thompson Sampling)" />
       </Box>
     );
   }
 
+  const agent = entry as AgentConfig;
   return (
-    <Box flexDirection="column" paddingX={1}>
-      <Text dimColor>Space toggle  e edit  a add  d delete  j/k navigate</Text>
-      {reviewers.map((entry, i) => {
-        const selected = i === selectedIndex;
-        const bg = selected ? 'blue' : undefined;
-        if (isAutoReviewer(entry)) {
-          return (
-            <Box key={entry.id}>
-              <Text backgroundColor={bg} color="yellow">
-                {selected ? '> ' : '  '}{entry.id}{'  '}[Auto - L0 selects]{'  '}
-                {entry.enabled ? <Text color="green">ON</Text> : <Text color="red">OFF</Text>}
-              </Text>
-            </Box>
-          );
-        }
-        const agent = entry as AgentConfig;
-        return (
-          <Box key={agent.id}>
-            <Text backgroundColor={bg}>
-              {selected ? '> ' : '  '}{agent.id}{'  '}{agent.provider ?? ''}{'/'}{agent.model}{'  '}
-              {agent.enabled ? <Text color="green">ON</Text> : <Text color="red">OFF</Text>}
-            </Text>
-          </Box>
-        );
-      })}
-      {message ? <Text color="green">{message}</Text> : null}
+    <Box flexDirection="column">
+      <DetailRow label={t('config.detail.id')} value={agent.id} />
+      <DetailRow label={t('config.detail.provider')} value={agent.provider ?? t('config.detail.none')} />
+      <DetailRow label={t('config.detail.model')} value={agent.model} highlight />
+      <DetailRow label={t('config.detail.backend')} value={agent.backend} />
+      <DetailRow label={t('config.detail.timeout')} value={`${agent.timeout ?? 120}s`} />
+      <DetailRow label={t('config.detail.persona')} value={agent.persona ?? t('config.detail.none')} />
+      <DetailRow label={t('config.detail.status')} value={enabled ? t('config.detail.enabled') : t('config.detail.disabled')} color={statusColor(enabled)} />
+      {agent.fallback ? (
+        <DetailRow label={t('config.detail.fallback')} value={`${agent.fallback.provider ?? ''}/${agent.fallback.model}`} />
+      ) : null}
+    </Box>
+  );
+}
+
+function DetailRow({ label, value, color, highlight }: {
+  label: string;
+  value: string;
+  color?: string;
+  highlight?: boolean;
+}): React.JSX.Element {
+  return (
+    <Box>
+      <Text dimColor>{label.padEnd(12)}</Text>
+      <Text color={color} bold={highlight}>{value}</Text>
     </Box>
   );
 }
