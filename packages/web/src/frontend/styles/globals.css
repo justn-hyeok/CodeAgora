@@ -598,6 +598,206 @@ a:hover {
 }
 
 .review-detail__section h3 {
+   Pipeline Page
+   ============================================================================ */
+
+.pipeline-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pipeline-header h2 {
+  margin-bottom: 0;
+}
+
+.connection-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.connection-status--connected {
+  color: var(--color-success);
+  background-color: rgba(63, 185, 80, 0.15);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.connection-status--disconnected {
+  color: var(--color-error);
+  background-color: rgba(248, 81, 73, 0.15);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+
+.pipeline-notice {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.pipeline-notice--info {
+  color: var(--color-accent);
+  background-color: rgba(88, 166, 255, 0.1);
+  border: 1px solid rgba(88, 166, 255, 0.2);
+}
+
+.pipeline-notice--warning {
+  color: var(--color-warning);
+  background-color: rgba(210, 153, 34, 0.1);
+  border: 1px solid rgba(210, 153, 34, 0.2);
+}
+
+.pipeline-section {
+  margin-bottom: 24px;
+}
+
+.pipeline-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .pipeline-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================================
+   Pipeline Stages
+   ============================================================================ */
+
+.pipeline-stages {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 16px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.stage {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-tertiary);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.stage--active {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+  animation: stage-pulse 2s ease-in-out infinite;
+}
+
+.stage--complete {
+  border-color: var(--color-success);
+}
+
+.stage--error {
+  border-color: var(--color-error);
+}
+
+@keyframes stage-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px var(--color-accent); }
+  50% { box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3); }
+}
+
+.stage-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.stage-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+
+.stage-icon--pending { color: var(--color-text-secondary); }
+.stage-icon--active { color: var(--color-accent); }
+.stage-icon--complete { color: var(--color-success); }
+.stage-icon--error { color: var(--color-error); }
+
+.stage-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.stage-message {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 6px;
+  line-height: 1.3;
+}
+
+.stage-connector {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  padding-top: 14px;
+}
+
+/* ============================================================================
+   Progress Bar
+   ============================================================================ */
+
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-bar-track {
+  flex: 1;
+  height: 6px;
+  background-color: var(--color-bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease-out;
+}
+
+.progress-bar-fill--active {
+  background-color: var(--color-accent);
+}
+
+.progress-bar-fill--complete {
+  background-color: var(--color-success);
+}
+
+.progress-bar-fill--error {
+  background-color: var(--color-error);
+}
+
+.progress-bar-label {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* ============================================================================
+   Event Log
+   ============================================================================ */
+
+.event-log h3 {
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 12px;
@@ -665,4 +865,240 @@ a:hover {
   font-size: 12px;
   color: var(--color-text-secondary);
   font-weight: 500;
+.event-log-empty {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.event-log-list {
+  max-height: 400px;
+  overflow-y: auto;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.event-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.event-item:last-child {
+  border-bottom: none;
+}
+
+.event-time {
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.event-icon {
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.event-message {
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.event-item--start .event-icon { color: var(--color-accent); }
+.event-item--update .event-icon { color: var(--color-text-secondary); }
+.event-item--complete .event-icon { color: var(--color-success); }
+.event-item--error .event-icon { color: var(--color-error); }
+
+/* ============================================================================
+   Live Discussion Cards
+   ============================================================================ */
+
+.live-discussions h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--color-text);
+}
+
+.live-discussions-empty {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.discussion-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.discussion-card {
+  padding: 12px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  transition: border-color 0.2s;
+}
+
+.discussion-card--active {
+  border-left: 3px solid var(--color-accent);
+}
+
+.discussion-card--completed {
+  border-left: 3px solid var(--color-success);
+  opacity: 0.8;
+}
+
+.discussion-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.discussion-severity {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.severity--critical {
+  color: #fff;
+  background-color: var(--color-error);
+}
+
+.severity--error {
+  color: var(--color-error);
+  background-color: rgba(248, 81, 73, 0.15);
+}
+
+.severity--warning {
+  color: var(--color-warning);
+  background-color: rgba(210, 153, 34, 0.15);
+}
+
+.severity--info {
+  color: var(--color-accent);
+  background-color: rgba(88, 166, 255, 0.15);
+}
+
+.discussion-status {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.discussion-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.discussion-file {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.discussion-rounds {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.discussion-round {
+  padding: 6px 8px;
+  background-color: var(--color-bg-tertiary);
+  border-radius: 4px;
+}
+
+.round-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.round-stances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.stance-badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.stance--agree {
+  color: var(--color-success);
+  background-color: rgba(63, 185, 80, 0.15);
+}
+
+.stance--disagree {
+  color: var(--color-error);
+  background-color: rgba(248, 81, 73, 0.15);
+}
+
+.stance--neutral {
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg);
+}
+
+.consensus-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-top: 4px;
+}
+
+.consensus--reached {
+  color: var(--color-success);
+  background-color: rgba(63, 185, 80, 0.15);
+}
+
+.consensus--not-reached {
+  color: var(--color-warning);
+  background-color: rgba(210, 153, 34, 0.15);
+}
+
+.discussion-forced {
+  font-size: 12px;
+  color: var(--color-warning);
+  margin-top: 8px;
+  padding: 6px 8px;
+  background-color: rgba(210, 153, 34, 0.08);
+  border-radius: 4px;
+}
+
+.discussion-objections {
+  margin-top: 8px;
+}
+
+.objection-item {
+  font-size: 12px;
+  color: var(--color-error);
+  padding: 4px 8px;
+  background-color: rgba(248, 81, 73, 0.08);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.discussion-final {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
 }
