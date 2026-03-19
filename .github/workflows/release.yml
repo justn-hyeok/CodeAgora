@@ -27,9 +27,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test -- --no-file-parallelism
+      - name: Web package tests
+        run: cd packages/web && npx vitest run
 
-      - name: Publish to npm
-        run: npm publish --access public
+      - name: Publish packages
+        run: |
+          for pkg in shared core github notifications cli tui mcp web; do
+            cd packages/$pkg && npm publish --access public || true && cd ../..
+          done
+          npm publish --access public || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
