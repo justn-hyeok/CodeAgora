@@ -163,6 +163,9 @@ agora review --dry-run
 | `--timeout <seconds>` | Pipeline-level timeout | — |
 | `--reviewer-timeout <seconds>` | Per-reviewer timeout | — |
 | `--no-discussion` | Skip L2 discussion phase | — |
+| `--quick` | Quick review (L1 only, no discussion) | — |
+| `--staged` | Review staged git changes (`git diff --staged`) | — |
+| `--json-stream` | Stream results as NDJSON (one object per line) | — |
 | `--pr <url-or-number>` | GitHub PR URL or number (fetches diff from GitHub) | — |
 | `--post-review` | Post review comments back to the PR (requires `--pr`) | — |
 | `--dry-run` | Validate config only | — |
@@ -273,6 +276,97 @@ Replay a past session's pipeline events interactively.
 
 ```bash
 agora replay 2026-03-16/001
+```
+
+### `agora status`
+
+Show a status overview — active config, detected providers, last session summary, and model health.
+
+```bash
+agora status
+```
+
+### `agora dashboard`
+
+Launch the local web dashboard. Opens the Hono.js REST API + React SPA in your browser.
+
+```bash
+agora dashboard              # start on default port
+agora dashboard --port 4000  # custom port
+agora dashboard --open       # auto-open in browser
+```
+
+**Options:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--port <number>` | Port to bind the dashboard server | `3141` |
+| `--open` | Automatically open the dashboard in the default browser | — |
+
+### `agora costs`
+
+Show cost analytics across past review sessions.
+
+```bash
+agora costs                        # all-time cost summary
+agora costs --last 10              # last 10 sessions
+agora costs --by reviewer          # break down by reviewer
+agora costs --by provider          # break down by provider
+```
+
+**Options:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--last <n>` | Limit to the last N sessions | — |
+| `--by <dimension>` | Group by `reviewer` or `provider` | — |
+
+### `agora language [locale]`
+
+Get or set the output language for CLI messages.
+
+```bash
+agora language        # show current language
+agora language en     # switch to English
+agora language ko     # switch to Korean
+```
+
+### `agora config-set <key> <value>`
+
+Set a config value using dot notation without opening the file manually.
+
+```bash
+agora config-set discussion.maxRounds 3
+agora config-set errorHandling.forfeitThreshold 0.5
+```
+
+### `agora config-edit`
+
+Open the current config file in `$EDITOR`.
+
+```bash
+agora config-edit
+```
+
+### `agora providers-test`
+
+Verify API key status by sending a lightweight probe to each configured provider.
+
+```bash
+agora providers-test
+```
+
+### `agora learn`
+
+Manage learned patterns from past review sessions.
+
+```bash
+agora learn list             # list all learned patterns
+agora learn stats            # show learning statistics
+agora learn remove <id>      # remove a pattern by ID
+agora learn clear            # remove all learned patterns
+agora learn export <file>    # export patterns to a JSON file
+agora learn import <file>    # import patterns from a JSON file
 ```
 
 ---

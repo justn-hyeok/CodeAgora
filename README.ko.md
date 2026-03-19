@@ -157,6 +157,9 @@ agora review --pr https://github.com/owner/repo/pull/123 --post-review
 | `--timeout <seconds>` | 파이프라인 타임아웃 | - |
 | `--reviewer-timeout <seconds>` | 리뷰어별 타임아웃 | - |
 | `--no-discussion` | L2 토론 건너뛰기 | - |
+| `--quick` | 빠른 리뷰 (L1만, 토론 없음) | - |
+| `--staged` | 스테이지된 변경 리뷰 (`git diff --staged`) | - |
+| `--json-stream` | NDJSON 스트리밍 출력 (한 줄에 객체 하나) | - |
 | `--pr <url-or-number>` | GitHub PR URL 또는 번호 | - |
 | `--post-review` | PR에 리뷰 코멘트 게시 (`--pr` 필요) | - |
 | `--dry-run` | 설정 검증만 | - |
@@ -225,6 +228,97 @@ agora explain 2026-03-16/001
 
 ```bash
 agora replay 2026-03-16/001
+```
+
+### `agora status`
+
+상태 개요를 표시합니다 — 활성 설정, 감지된 프로바이더, 마지막 세션 요약, 모델 상태.
+
+```bash
+agora status
+```
+
+### `agora dashboard`
+
+로컬 웹 대시보드를 실행합니다. Hono.js REST API + React SPA를 브라우저에서 엽니다.
+
+```bash
+agora dashboard              # 기본 포트로 시작
+agora dashboard --port 4000  # 포트 지정
+agora dashboard --open       # 브라우저 자동 열기
+```
+
+**옵션:**
+
+| 플래그 | 설명 | 기본값 |
+|--------|------|--------|
+| `--port <number>` | 대시보드 서버 포트 | `3141` |
+| `--open` | 기본 브라우저에서 대시보드 자동 열기 | - |
+
+### `agora costs`
+
+과거 리뷰 세션의 비용 분석을 표시합니다.
+
+```bash
+agora costs                        # 전체 비용 요약
+agora costs --last 10              # 최근 10개 세션
+agora costs --by reviewer          # 리뷰어별 분류
+agora costs --by provider          # 프로바이더별 분류
+```
+
+**옵션:**
+
+| 플래그 | 설명 | 기본값 |
+|--------|------|--------|
+| `--last <n>` | 최근 N개 세션으로 제한 | - |
+| `--by <dimension>` | `reviewer` 또는 `provider`별 그룹화 | - |
+
+### `agora language [locale]`
+
+CLI 메시지의 출력 언어를 조회하거나 설정합니다.
+
+```bash
+agora language        # 현재 언어 표시
+agora language en     # 영어로 전환
+agora language ko     # 한국어로 전환
+```
+
+### `agora config-set <key> <value>`
+
+파일을 직접 열지 않고 점 표기법으로 설정값을 변경합니다.
+
+```bash
+agora config-set discussion.maxRounds 3
+agora config-set errorHandling.forfeitThreshold 0.5
+```
+
+### `agora config-edit`
+
+`$EDITOR`로 현재 설정 파일을 엽니다.
+
+```bash
+agora config-edit
+```
+
+### `agora providers-test`
+
+각 설정된 프로바이더에 경량 프로브를 전송하여 API 키 상태를 검증합니다.
+
+```bash
+agora providers-test
+```
+
+### `agora learn`
+
+과거 리뷰 세션에서 학습된 패턴을 관리합니다.
+
+```bash
+agora learn list             # 학습된 패턴 목록 보기
+agora learn stats            # 학습 통계 표시
+agora learn remove <id>      # ID로 패턴 삭제
+agora learn clear            # 모든 학습 패턴 삭제
+agora learn export <file>    # 패턴을 JSON 파일로 내보내기
+agora learn import <file>    # JSON 파일에서 패턴 가져오기
 ```
 
 ---
