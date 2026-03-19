@@ -178,5 +178,32 @@
 
   "severity.critical": "CRITICAL",
   "severity.warning": "WARNING",
-  "severity.suggestion": "SUGGESTION"
+  "severity.suggestion": "SUGGESTION",
+
+  "cli.review.starting": "Starting review...",
+  "cli.review.complete": "Review complete",
+  "cli.review.noInput": "No diff input. Pipe a diff or provide a file path.",
+  "cli.config.notFound": "Config not found. Run '{cmd} init' first.",
+  "cli.config.invalid": "Invalid configuration",
+  "cli.doctor.healthy": "All checks passed",
+  "cli.doctor.issues": "{count} issue(s) found",
+  "cli.init.welcome": "Welcome to CodeAgora!",
+  "cli.init.noKeys": "No API keys found. Groq offers a free tier — get started at https://console.groq.com",
+  "cli.init.created": "Config created at {path}",
+  "cli.init.preset.quick": "Quick review (Groq only)",
+  "cli.init.preset.thorough": "Thorough review (multi-provider)",
+  "cli.init.preset.free": "Free review (Groq + GitHub Models)",
+  "cli.init.healthCheck": "Checking provider connectivity...",
+  "cli.costs.total": "Total",
+  "cli.costs.sessions": "Sessions",
+  "cli.costs.average": "Average per session",
+  "cli.dashboard.starting": "Starting dashboard at {url}",
+  "cli.dashboard.stopped": "Dashboard stopped",
+  "cli.error.apiKey": "API key not set for provider: {provider}",
+  "cli.error.timeout": "Review timed out after {seconds}s",
+  "cli.error.allFailed": "All reviewers failed",
+  "cli.language.current": "Current language: {lang}",
+  "cli.language.set": "Language set to {lang}",
+  "cli.learn.list.empty": "No learned patterns",
+  "cli.learn.cleared": "All learned patterns cleared"
 }

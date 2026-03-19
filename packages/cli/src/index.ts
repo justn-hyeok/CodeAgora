@@ -22,7 +22,7 @@ import { formatError, classifyError } from './utils/errors.js';
 import { sendNotifications, type NotificationPayload } from '@codeagora/notifications/webhook.js';
 import ora from 'ora';
 import { ProgressEmitter } from '@codeagora/core/pipeline/progress.js';
-import { setLocale, detectLocale } from '@codeagora/shared/i18n/index.js';
+import { setLocale, detectLocale, t } from '@codeagora/shared/i18n/index.js';
 import { parsePrUrl, createGitHubConfig } from '@codeagora/github/client.js';
 import { fetchPrDiff } from '@codeagora/github/pr-diff.js';
 import { buildDiffPositionIndex } from '@codeagora/github/diff-parser.js';
@@ -34,6 +34,8 @@ import { getModelLeaderboard, formatLeaderboard } from './commands/models.js';
 import { explainSession } from './commands/explain.js';
 import { computeAgreementMatrix, formatAgreementMatrix } from './commands/agreement.js';
 import { loadSessionForReplay } from './commands/replay.js';
+import { startDashboard } from './commands/dashboard.js';
+import { getCostSummary } from './commands/costs.js';
 
 // Load API keys from ~/.config/codeagora/credentials
 loadCredentials();
@@ -78,6 +80,7 @@ program
   .option('--notify', 'send notification after review', false)
   .option('--pr <url-or-number>', 'GitHub PR URL or number (fetches diff from GitHub)')
   .option('--post-review', 'Post review comments back to the PR (requires --pr)', false)
+  .option('--quick', 'Quick review (L1 only, skip discussion and verdict)')
   .action(async (diffPath: string | undefined, options: {
     dryRun?: boolean;
     output: string;
@@ -92,6 +95,7 @@ program
     notify: boolean;
     pr?: string;
     postReview: boolean;
+    quick?: boolean;
   }) => {
     // Hoist stdinTmpPath so finally block can clean it up (#77)
     let stdinTmpPath: string | undefined;
@@ -195,6 +199,7 @@ program
         ...(options.timeout && { timeoutMs: options.timeout * 1000 }),
         ...(options.reviewerTimeout && { reviewerTimeoutMs: options.reviewerTimeout * 1000 }),
         ...(!options.discussion && { skipDiscussion: true }),
+        ...(options.quick && { skipDiscussion: true, skipHead: true }),
         ...(reviewerSelection && { reviewerSelection }),
       };
 
@@ -708,6 +713,127 @@ program
       : `✓ Language set to English (en).`
     );
   });
+
+// === Dashboard command (#163) ===
+
+program
+  .command('dashboard')
+  .description('Launch web dashboard')
+  .option('--port <port>', 'Port number', '6274')
+  .option('--open', 'Open browser')
+  .action(async (options: { port: string; open?: boolean }) => {
+    try {
+      await startDashboard({ port: parseInt(options.port, 10), open: options.open });
+    } catch (error) {
+      console.error('Dashboard failed:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+// === Costs command (#165) ===
+
+program
+  .command('costs')
+  .description('Show cost analytics')
+  .option('--last <days>', 'Last N days', parseInt)
+  .option('--by <group>', 'Group by: reviewer, provider')
+  .action(async (options: { last?: number; by?: string }) => {
+    try {
+      const summary = await getCostSummary(process.cwd(), options);
+      console.log(summary);
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+// === Help text examples (#169) ===
+
+// Find registered commands and add help text
+for (const cmd of program.commands) {
+  const name = cmd.name();
+  switch (name) {
+    case 'review':
+      cmd.addHelpText('after', `
+Examples:
+  git diff HEAD~1 | ${displayName} review          Review last commit
+  ${displayName} review changes.diff               Review a diff file
+  ${displayName} review --pr 123                   Review a GitHub PR
+  ${displayName} review --quick                    Quick review (L1 only)
+  ${displayName} review --output json              JSON output for CI
+`);
+      break;
+    case 'init':
+      cmd.addHelpText('after', `
+Examples:
+  ${displayName} init                              Interactive setup wizard
+  ${displayName} init -y                           Use defaults (no prompts)
+  ${displayName} init --format yaml                Create YAML config
+  ${displayName} init --ci                         Also create GitHub Actions workflow
+`);
+      break;
+    case 'doctor':
+      cmd.addHelpText('after', `
+Examples:
+  ${displayName} doctor                            Check environment
+  ${displayName} doctor --live                     Test actual API connections
+`);
+      break;
+    case 'sessions':
+      cmd.addHelpText('after', `
+Examples:
+  ${displayName} sessions list                     List recent sessions
+  ${displayName} sessions list --limit 5           Show last 5 sessions
+  ${displayName} sessions show 2026-03-19/001      Show session details
+  ${displayName} sessions diff 001 002             Compare two sessions
+  ${displayName} sessions stats                    Show review statistics
+`);
+      break;
+    case 'models':
+      cmd.addHelpText('after', `
+Examples:
+  ${displayName} models                            Show model leaderboard
+`);
+      break;
+    case 'costs':
+      cmd.addHelpText('after', `
+Examples:
+  ${displayName} costs                             Show total cost summary
+  ${displayName} costs --last 7                    Costs from last 7 days
+  ${displayName} costs --by reviewer               Group costs by reviewer model
+  ${displayName} costs --by provider               Group costs by provider
+`);
+      break;
+    case 'learn':
+      cmd.addHelpText('after', `
+Examples:
+  ${displayName} learn from-pr --pr 42             Learn from PR #42
+  ${displayName} learn list                        Show all learned patterns
+  ${displayName} learn stats                       Show pattern statistics
+  ${displayName} learn remove 0                    Remove pattern at index 0
+  ${displayName} learn export > patterns.json      Export patterns
+  ${displayName} learn import patterns.json        Import patterns
+  ${displayName} learn clear                       Clear all patterns
+`);
+      break;
+    case 'dashboard':
+      cmd.addHelpText('after', `
+Examples:
+  ${displayName} dashboard                         Start on default port 6274
+  ${displayName} dashboard --port 8080             Start on custom port
+  ${displayName} dashboard --open                  Start and open browser
+`);
+      break;
+    case 'language':
+      cmd.addHelpText('after', `
+Examples:
+  ${displayName} language                          Show current language
+  ${displayName} language en                       Set language to English
+  ${displayName} language ko                       Set language to Korean
+`);
+      break;
+  }
+}
 
 // Only parse argv when this file is the direct entry point (not imported by tests).
 // In ESM the canonical check is comparing import.meta.url to the process entry module.

@@ -11,6 +11,7 @@ import { generateMinimalTemplate } from '@codeagora/core/config/templates.js';
 import { getModePreset } from '@codeagora/core/config/mode-presets.js';
 import { PROVIDER_ENV_VARS } from '@codeagora/shared/providers/env-vars.js';
 import { stringify as yamlStringify } from 'yaml';
+import { t, detectLocale } from '@codeagora/shared/i18n/index.js';
 import type { ReviewMode, Language } from '@codeagora/core/types/config.js';
 
 const _dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -227,6 +228,70 @@ const PROVIDER_DEFAULT_MODELS: Record<string, string> = {
 };
 
 // ============================================================================
+// Init Presets (#166)
+// ============================================================================
+
+interface InitPreset {
+  id: string;
+  label: string;
+  labelKo: string;
+  provider: string;
+  model: string;
+  reviewerCount: number;
+  discussion: boolean;
+}
+
+const INIT_PRESETS: InitPreset[] = [
+  {
+    id: 'quick',
+    label: 'Quick review (Groq only)',
+    labelKo: '빠른 리뷰 (Groq만 사용)',
+    provider: 'groq',
+    model: 'llama-3.3-70b-versatile',
+    reviewerCount: 1,
+    discussion: false,
+  },
+  {
+    id: 'thorough',
+    label: 'Thorough review (multi-provider)',
+    labelKo: '심층 리뷰 (멀티 프로바이더)',
+    provider: 'groq',
+    model: 'llama-3.3-70b-versatile',
+    reviewerCount: 3,
+    discussion: true,
+  },
+  {
+    id: 'free',
+    label: 'Free review (Groq + GitHub Models)',
+    labelKo: '무료 리뷰 (Groq + GitHub Models)',
+    provider: 'groq',
+    model: 'llama-3.3-70b-versatile',
+    reviewerCount: 2,
+    discussion: false,
+  },
+];
+
+/**
+ * Detect if any provider API keys are set in the environment.
+ */
+function detectApiKeys(): string[] {
+  const found: string[] = [];
+  for (const [name, envVar] of Object.entries(PROVIDER_ENV_VARS)) {
+    if (process.env[envVar]) {
+      found.push(name);
+    }
+  }
+  return found;
+}
+
+/**
+ * Get localized text for the wizard based on current locale.
+ */
+function isKorean(): boolean {
+  return detectLocale() === 'ko';
+}
+
+// ============================================================================
 // GitHub Actions workflow
 // ============================================================================
 
@@ -305,107 +370,165 @@ export async function runInitInteractive(options: InitOptions): Promise<InitResu
   const created: string[] = [];
   const skipped: string[] = [];
   const warnings: string[] = [];
+  const ko = isKorean();
 
-  p.intro('CodeAgora Setup');
+  p.intro(t('cli.init.welcome'));
 
-  // Step 1: Config format
-  const formatSelection = await p.select({
-    message: 'Config format?',
+  // Free provider recommendation: show if no API keys are detected
+  const detectedKeys = detectApiKeys();
+  if (detectedKeys.length === 0) {
+    p.note(t('cli.init.noKeys'));
+  }
+
+  // Step 1: Preset or custom
+  const setupMode = await p.select({
+    message: ko ? '설정 방법을 선택하세요' : 'How would you like to set up?',
     options: [
-      { value: 'json', label: 'JSON' },
-      { value: 'yaml', label: 'YAML' },
+      ...INIT_PRESETS.map((preset) => ({
+        value: preset.id,
+        label: ko ? preset.labelKo : preset.label,
+      })),
+      { value: 'custom', label: ko ? '직접 설정' : 'Custom setup' },
     ],
   });
-  if (p.isCancel(formatSelection)) {
-    p.cancel('Setup cancelled.');
+  if (p.isCancel(setupMode)) {
+    p.cancel(ko ? '설정이 취소되었습니다.' : 'Setup cancelled.');
     throw new UserCancelledError();
   }
-  const format = formatSelection as 'json' | 'yaml';
 
-  // Step 2: Provider selection — detect available API keys
-  const providerOptions = Object.entries(PROVIDER_ENV_VARS).map(([name, envVar]) => ({
-    value: name,
-    label: `${name}${process.env[envVar] ? ' \u2713 (key detected)' : ''}`,
-  }));
-  const providerSelection = await p.select({
-    message: 'Which provider?',
-    options: providerOptions,
-  });
-  if (p.isCancel(providerSelection)) {
-    p.cancel('Setup cancelled.');
-    throw new UserCancelledError();
-  }
-  const provider = providerSelection as string;
+  let provider: string;
+  let model: string;
+  let reviewerCount: number;
+  let discussion: boolean;
+  let format: 'json' | 'yaml';
+  let mode: ReviewMode = 'pragmatic';
+  let language: Language;
 
-  // Step 3: Reviewer count
-  const countSelection = await p.select({
-    message: 'How many reviewers?',
-    options: [
-      { value: '1', label: '1 (minimal)' },
-      { value: '3', label: '3 (recommended)' },
-      { value: '5', label: '5 (thorough)' },
-    ],
-    initialValue: '3',
-  });
-  if (p.isCancel(countSelection)) {
-    p.cancel('Setup cancelled.');
-    throw new UserCancelledError();
-  }
-  const reviewerCount = parseInt(countSelection as string, 10);
+  const selectedPreset = INIT_PRESETS.find((pr) => pr.id === setupMode);
+  if (selectedPreset) {
+    // Use preset defaults
+    provider = selectedPreset.provider;
+    model = selectedPreset.model;
+    reviewerCount = selectedPreset.reviewerCount;
+    discussion = selectedPreset.discussion;
+    format = options.format === 'yaml' ? 'yaml' : 'json';
 
-  // Step 4: Model name
-  const defaultModel = PROVIDER_DEFAULT_MODELS[provider] ?? 'llama-3.3-70b-versatile';
-  const modelSelection = await p.text({
-    message: 'Model name?',
-    placeholder: defaultModel,
-    defaultValue: defaultModel,
-  });
-  if (p.isCancel(modelSelection)) {
-    p.cancel('Setup cancelled.');
-    throw new UserCancelledError();
-  }
-  const model = (modelSelection as string) || defaultModel;
+    // Language selection
+    const languageSelection = await p.select({
+      message: ko ? '리뷰 언어?' : 'Review language?',
+      options: [
+        { value: 'en', label: 'English' },
+        { value: 'ko', label: '한국어' },
+      ],
+      initialValue: ko ? 'ko' : 'en',
+    });
+    if (p.isCancel(languageSelection)) {
+      p.cancel(ko ? '설정이 취소되었습니다.' : 'Setup cancelled.');
+      throw new UserCancelledError();
+    }
+    language = languageSelection as Language;
+  } else {
+    // Custom setup: full wizard
 
-  // Step 5: Enable discussion
-  const discussionSelection = await p.confirm({
-    message: 'Enable L2 discussion (multi-agent debate)?',
-    initialValue: true,
-  });
-  if (p.isCancel(discussionSelection)) {
-    p.cancel('Setup cancelled.');
-    throw new UserCancelledError();
-  }
-  const discussion = discussionSelection as boolean;
+    // Config format
+    const formatSelection = await p.select({
+      message: ko ? '설정 파일 형식?' : 'Config format?',
+      options: [
+        { value: 'json', label: 'JSON' },
+        { value: 'yaml', label: 'YAML' },
+      ],
+    });
+    if (p.isCancel(formatSelection)) {
+      p.cancel(ko ? '설정이 취소되었습니다.' : 'Setup cancelled.');
+      throw new UserCancelledError();
+    }
+    format = formatSelection as 'json' | 'yaml';
 
-  // Step 6: Review mode
-  const modeSelection = await p.select({
-    message: 'Review mode?',
-    options: [
-      { value: 'pragmatic', label: 'Pragmatic (balanced, fewer false positives)' },
-      { value: 'strict', label: 'Strict (security-focused, lower thresholds)' },
-    ],
-    initialValue: 'pragmatic',
-  });
-  if (p.isCancel(modeSelection)) {
-    p.cancel('Setup cancelled.');
-    throw new UserCancelledError();
-  }
-  const mode = modeSelection as ReviewMode;
+    // Provider selection — detect available API keys
+    const providerOptions = Object.entries(PROVIDER_ENV_VARS).map(([name, envVar]) => ({
+      value: name,
+      label: `${name}${process.env[envVar] ? ' \u2713 (key detected)' : ''}`,
+    }));
+    const providerSelection = await p.select({
+      message: ko ? '어떤 프로바이더를 사용할까요?' : 'Which provider?',
+      options: providerOptions,
+    });
+    if (p.isCancel(providerSelection)) {
+      p.cancel(ko ? '설정이 취소되었습니다.' : 'Setup cancelled.');
+      throw new UserCancelledError();
+    }
+    provider = providerSelection as string;
 
-  // Step 7: Language
-  const languageSelection = await p.select({
-    message: 'Review language?',
-    options: [
-      { value: 'en', label: 'English' },
-      { value: 'ko', label: '한국어' },
-    ],
-    initialValue: 'en',
-  });
-  if (p.isCancel(languageSelection)) {
-    p.cancel('Setup cancelled.');
-    throw new UserCancelledError();
+    // Reviewer count
+    const countSelection = await p.select({
+      message: ko ? '리뷰어 수?' : 'How many reviewers?',
+      options: [
+        { value: '1', label: ko ? '1 (최소)' : '1 (minimal)' },
+        { value: '3', label: ko ? '3 (권장)' : '3 (recommended)' },
+        { value: '5', label: ko ? '5 (심층)' : '5 (thorough)' },
+      ],
+      initialValue: '3',
+    });
+    if (p.isCancel(countSelection)) {
+      p.cancel(ko ? '설정이 취소되었습니다.' : 'Setup cancelled.');
+      throw new UserCancelledError();
+    }
+    reviewerCount = parseInt(countSelection as string, 10);
+
+    // Model name
+    const defaultModel = PROVIDER_DEFAULT_MODELS[provider] ?? 'llama-3.3-70b-versatile';
+    const modelSelection = await p.text({
+      message: ko ? '모델 이름?' : 'Model name?',
+      placeholder: defaultModel,
+      defaultValue: defaultModel,
+    });
+    if (p.isCancel(modelSelection)) {
+      p.cancel(ko ? '설정이 취소되었습니다.' : 'Setup cancelled.');
+      throw new UserCancelledError();
+    }
+    model = (modelSelection as string) || defaultModel;
+
+    // Enable discussion
+    const discussionSelection = await p.confirm({
+      message: ko ? 'L2 토론 (멀티 에이전트 디베이트) 활성화?' : 'Enable L2 discussion (multi-agent debate)?',
+      initialValue: true,
+    });
+    if (p.isCancel(discussionSelection)) {
+      p.cancel(ko ? '설정이 취소되었습니다.' : 'Setup cancelled.');
+      throw new UserCancelledError();
+    }
+    discussion = discussionSelection as boolean;
+
+    // Review mode
+    const modeSelection = await p.select({
+      message: ko ? '리뷰 모드?' : 'Review mode?',
+      options: [
+        { value: 'pragmatic', label: ko ? 'Pragmatic (균형적, 오탐 감소)' : 'Pragmatic (balanced, fewer false positives)' },
+        { value: 'strict', label: ko ? 'Strict (보안 중심, 낮은 임계값)' : 'Strict (security-focused, lower thresholds)' },
+      ],
+      initialValue: 'pragmatic',
+    });
+    if (p.isCancel(modeSelection)) {
+      p.cancel(ko ? '설정이 취소되었습니다.' : 'Setup cancelled.');
+      throw new UserCancelledError();
+    }
+    mode = modeSelection as ReviewMode;
+
+    // Language
+    const languageSelection = await p.select({
+      message: ko ? '리뷰 언어?' : 'Review language?',
+      options: [
+        { value: 'en', label: 'English' },
+        { value: 'ko', label: '한국어' },
+      ],
+      initialValue: ko ? 'ko' : 'en',
+    });
+    if (p.isCancel(languageSelection)) {
+      p.cancel(ko ? '설정이 취소되었습니다.' : 'Setup cancelled.');
+      throw new UserCancelledError();
+    }
+    language = languageSelection as Language;
   }
-  const language = languageSelection as Language;
 
   // Build config from selections
   const configData = buildCustomConfig({ provider, model, reviewerCount, discussion, mode, language });
@@ -430,7 +553,24 @@ export async function runInitInteractive(options: InitOptions): Promise<InitResu
   const reviewIgnoreContent = generateReviewIgnore();
   await writeFile(reviewIgnorePath, reviewIgnoreContent, force, created, skipped);
 
-  p.outro('Config created!');
+  // Provider health check: ping one model from each configured provider
+  const envVar = PROVIDER_ENV_VARS[provider];
+  if (envVar && process.env[envVar]) {
+    const spinner = p.spinner();
+    spinner.start(t('cli.init.healthCheck'));
+    try {
+      const { getModel } = await import('@codeagora/core/l1/provider-registry.js');
+      const { generateText } = await import('ai');
+      const languageModel = getModel(provider, model);
+      await generateText({ model: languageModel, prompt: 'Say OK', abortSignal: AbortSignal.timeout(10_000) });
+      spinner.stop(`${provider}/${model} \u2713`);
+    } catch {
+      spinner.stop(`${provider}/${model} \u2717 (could not connect)`);
+      warnings.push(`Provider ${provider} health check failed. Verify your API key.`);
+    }
+  }
+
+  p.outro(t('cli.init.created', { path: configPath }));
 
   return { created, skipped, warnings };
 }

@@ -178,5 +178,32 @@
 
   "severity.critical": "심각",
   "severity.warning": "경고",
-  "severity.suggestion": "제안"
+  "severity.suggestion": "제안",
+
+  "cli.review.starting": "리뷰를 시작합니다...",
+  "cli.review.complete": "리뷰 완료",
+  "cli.review.noInput": "diff 입력이 없습니다. 파이프하거나 파일 경로를 지정하세요.",
+  "cli.config.notFound": "설정 파일을 찾을 수 없습니다. '{cmd} init'을 먼저 실행하세요.",
+  "cli.config.invalid": "잘못된 설정입니다",
+  "cli.doctor.healthy": "모든 검사를 통과했습니다",
+  "cli.doctor.issues": "{count}개의 문제가 발견되었습니다",
+  "cli.init.welcome": "CodeAgora에 오신 것을 환영합니다!",
+  "cli.init.noKeys": "API 키가 감지되지 않았습니다. Groq은 무료 티어를 제공합니다 — https://console.groq.com 에서 시작하세요",
+  "cli.init.created": "설정 파일이 {path}에 생성되었습니다",
+  "cli.init.preset.quick": "빠른 리뷰 (Groq만 사용)",
+  "cli.init.preset.thorough": "심층 리뷰 (멀티 프로바이더)",
+  "cli.init.preset.free": "무료 리뷰 (Groq + GitHub Models)",
+  "cli.init.healthCheck": "프로바이더 연결을 확인하는 중...",
+  "cli.costs.total": "총 비용",
+  "cli.costs.sessions": "세션 수",
+  "cli.costs.average": "세션당 평균",
+  "cli.dashboard.starting": "대시보드를 {url}에서 시작합니다",
+  "cli.dashboard.stopped": "대시보드가 종료되었습니다",
+  "cli.error.apiKey": "프로바이더의 API 키가 설정되지 않았습니다: {provider}",
+  "cli.error.timeout": "리뷰가 {seconds}초 후 타임아웃되었습니다",
+  "cli.error.allFailed": "모든 리뷰어가 실패했습니다",
+  "cli.language.current": "현재 언어: {lang}",
+  "cli.language.set": "언어가 {lang}(으)로 설정되었습니다",
+  "cli.learn.list.empty": "학습된 패턴이 없습니다",
+  "cli.learn.cleared": "모든 학습 패턴이 초기화되었습니다"
 }
