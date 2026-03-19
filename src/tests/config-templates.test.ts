@@ -7,6 +7,7 @@ import {
   generateFullTemplate,
   generateMinimalTemplate,
   generateDeclarativeTemplate,
+  generateMultiProviderTemplate,
 } from '@codeagora/core/config/templates.js';
 
 describe('generateFullTemplate', () => {
@@ -106,6 +107,63 @@ describe('generateDeclarativeTemplate', () => {
   });
 });
 
+describe('generateMultiProviderTemplate', () => {
+  it('should return valid parseable JSON', () => {
+    const output = generateMultiProviderTemplate('json');
+    expect(() => JSON.parse(output)).not.toThrow();
+  });
+
+  it('should contain 5 reviewers from diverse providers (L1)', () => {
+    const output = generateMultiProviderTemplate('json');
+    const parsed = JSON.parse(output);
+    expect(Array.isArray(parsed.reviewers)).toBe(true);
+    expect(parsed.reviewers).toHaveLength(5);
+    const providers = parsed.reviewers.map((r: any) => r.provider);
+    expect(new Set(providers).size).toBe(5); // all different providers
+  });
+
+  it('should have L2 supporters from reasoning-capable providers', () => {
+    const output = generateMultiProviderTemplate('json');
+    const parsed = JSON.parse(output);
+    expect(parsed.supporters.pool).toHaveLength(3);
+    const providers = parsed.supporters.pool.map((s: any) => s.provider);
+    expect(providers).toContain('deepinfra');
+    expect(providers).toContain('moonshot');
+    expect(providers).toContain('siliconflow');
+  });
+
+  it('should have L3 head using flagship provider (anthropic)', () => {
+    const output = generateMultiProviderTemplate('json');
+    const parsed = JSON.parse(output);
+    expect(parsed.head.provider).toBe('anthropic');
+    expect(parsed.head.model).toBe('claude-opus-4-6');
+  });
+
+  it('should start with the multi-provider YAML header', () => {
+    const output = generateMultiProviderTemplate('yaml');
+    expect(output).toMatch(/^# CodeAgora Configuration \(multi-provider\)/);
+  });
+
+  it('should contain expected top-level keys in JSON', () => {
+    const output = generateMultiProviderTemplate('json');
+    const parsed = JSON.parse(output);
+    expect(parsed).toHaveProperty('reviewers');
+    expect(parsed).toHaveProperty('supporters');
+    expect(parsed).toHaveProperty('moderator');
+    expect(parsed).toHaveProperty('discussion');
+    expect(parsed).toHaveProperty('head');
+    expect(parsed).toHaveProperty('errorHandling');
+  });
+
+  it('should use higher timeout for L2 supporters than L1 reviewers', () => {
+    const output = generateMultiProviderTemplate('json');
+    const parsed = JSON.parse(output);
+    const reviewerTimeout = parsed.reviewers[0].timeout;
+    const supporterTimeout = parsed.supporters.pool[0].timeout;
+    expect(supporterTimeout).toBeGreaterThan(reviewerTimeout);
+  });
+});
+
 describe('round-trip JSON parsing', () => {
   it('generateFullTemplate json round-trips through JSON.parse', () => {
     const output = generateFullTemplate('json');
@@ -123,6 +181,13 @@ describe('round-trip JSON parsing', () => {
 
   it('generateDeclarativeTemplate json round-trips through JSON.parse', () => {
     const output = generateDeclarativeTemplate('json');
+    const parsed = JSON.parse(output);
+    expect(parsed).toBeTruthy();
+    expect(typeof parsed).toBe('object');
+  });
+
+  it('generateMultiProviderTemplate json round-trips through JSON.parse', () => {
+    const output = generateMultiProviderTemplate('json');
     const parsed = JSON.parse(output);
     expect(parsed).toBeTruthy();
     expect(typeof parsed).toBe('object');

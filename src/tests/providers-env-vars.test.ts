@@ -6,8 +6,8 @@ import { describe, it, expect } from 'vitest';
 import { PROVIDER_ENV_VARS, getProviderEnvVar } from '@codeagora/shared/providers/env-vars.js';
 
 describe('PROVIDER_ENV_VARS', () => {
-  it('should map all 15 known providers', () => {
-    expect(Object.keys(PROVIDER_ENV_VARS)).toHaveLength(15);
+  it('should map all 24 known providers', () => {
+    expect(Object.keys(PROVIDER_ENV_VARS)).toHaveLength(24);
   });
 
   it('should map nvidia-nim to NVIDIA_API_KEY', () => {
@@ -88,7 +88,7 @@ describe('getProviderEnvVar', () => {
     expect(getProviderEnvVar('openai')).toBe('OPENAI_API_KEY');
   });
 
-  it('should fall back to uppercase for unknown provider: cohere', () => {
+  it('should return mapped env var for known provider: cohere', () => {
     expect(getProviderEnvVar('cohere')).toBe('COHERE_API_KEY');
   });
 });

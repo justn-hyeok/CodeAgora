@@ -37,6 +37,55 @@ vi.mock('@ai-sdk/google', () => ({
   }),
 }));
 
+vi.mock('@ai-sdk/fireworks', () => ({
+  createFireworks: vi.fn(() => {
+    const provider = (modelId: string) => ({ modelId, provider: 'fireworks' });
+    return provider;
+  }),
+}));
+
+vi.mock('@ai-sdk/cohere', () => ({
+  createCohere: vi.fn(() => {
+    const provider = (modelId: string) => ({ modelId, provider: 'cohere' });
+    return provider;
+  }),
+}));
+
+vi.mock('@ai-sdk/deepinfra', () => ({
+  createDeepInfra: vi.fn(() => {
+    const provider = (modelId: string) => ({ modelId, provider: 'deepinfra' });
+    return provider;
+  }),
+}));
+
+vi.mock('@ai-sdk/moonshotai', () => ({
+  createMoonshotAI: vi.fn(() => {
+    const provider = (modelId: string) => ({ modelId, provider: 'moonshot' });
+    return provider;
+  }),
+}));
+
+vi.mock('@ai-sdk/perplexity', () => ({
+  createPerplexity: vi.fn(() => {
+    const provider = (modelId: string) => ({ modelId, provider: 'perplexity' });
+    return provider;
+  }),
+}));
+
+vi.mock('@ai-sdk/huggingface', () => ({
+  createHuggingFace: vi.fn(() => {
+    const provider = (modelId: string) => ({ modelId, provider: 'huggingface' });
+    return provider;
+  }),
+}));
+
+vi.mock('@ai-sdk/baseten', () => ({
+  createBaseten: vi.fn(() => {
+    const provider = (modelId: string) => ({ modelId, provider: 'baseten' });
+    return provider;
+  }),
+}));
+
 const mockCreateGroq = vi.mocked(createGroq);
 
 describe('Provider Registry', () => {
@@ -61,7 +110,16 @@ describe('Provider Registry', () => {
       expect(providers).toContain('cerebras');
       expect(providers).toContain('together');
       expect(providers).toContain('xai');
-      expect(providers.length).toBeGreaterThanOrEqual(8);
+      expect(providers).toContain('fireworks');
+      expect(providers).toContain('cohere');
+      expect(providers).toContain('deepinfra');
+      expect(providers).toContain('moonshot');
+      expect(providers).toContain('perplexity');
+      expect(providers).toContain('huggingface');
+      expect(providers).toContain('baseten');
+      expect(providers).toContain('siliconflow');
+      expect(providers).toContain('novita');
+      expect(providers.length).toBeGreaterThanOrEqual(24);
     });
   });
 
@@ -185,6 +243,132 @@ describe('Provider Registry', () => {
       delete process.env.XAI_API_KEY;
       expect(() => getModel('xai', 'model'))
         .toThrow(/Set XAI_API_KEY environment variable/);
+    });
+
+    // --- Fireworks ---
+    it('should create a fireworks model when API key is set', () => {
+      vi.stubEnv('FIREWORKS_API_KEY', 'test-key');
+      const model = getModel('fireworks', 'qwen2.5-coder-32b');
+      expect(model).toBeDefined();
+      expect((model as any).modelId).toBe('qwen2.5-coder-32b');
+    });
+
+    it('should throw when FIREWORKS_API_KEY is missing', () => {
+      delete process.env.FIREWORKS_API_KEY;
+      expect(() => getModel('fireworks', 'model'))
+        .toThrow(/Set FIREWORKS_API_KEY environment variable/);
+    });
+
+    // --- Cohere ---
+    it('should create a cohere model when API key is set', () => {
+      vi.stubEnv('COHERE_API_KEY', 'test-key');
+      const model = getModel('cohere', 'command-r-plus');
+      expect(model).toBeDefined();
+      expect((model as any).modelId).toBe('command-r-plus');
+    });
+
+    it('should throw when COHERE_API_KEY is missing', () => {
+      delete process.env.COHERE_API_KEY;
+      expect(() => getModel('cohere', 'model'))
+        .toThrow(/Set COHERE_API_KEY environment variable/);
+    });
+
+    // --- DeepInfra ---
+    it('should create a deepinfra model when API key is set', () => {
+      vi.stubEnv('DEEPINFRA_API_KEY', 'test-key');
+      const model = getModel('deepinfra', 'deepseek-v3');
+      expect(model).toBeDefined();
+      expect((model as any).modelId).toBe('deepseek-v3');
+    });
+
+    it('should throw when DEEPINFRA_API_KEY is missing', () => {
+      delete process.env.DEEPINFRA_API_KEY;
+      expect(() => getModel('deepinfra', 'model'))
+        .toThrow(/Set DEEPINFRA_API_KEY environment variable/);
+    });
+
+    // --- Moonshot ---
+    it('should create a moonshot model when API key is set', () => {
+      vi.stubEnv('MOONSHOT_API_KEY', 'test-key');
+      const model = getModel('moonshot', 'kimi-k2-thinking');
+      expect(model).toBeDefined();
+      expect((model as any).modelId).toBe('kimi-k2-thinking');
+    });
+
+    it('should throw when MOONSHOT_API_KEY is missing', () => {
+      delete process.env.MOONSHOT_API_KEY;
+      expect(() => getModel('moonshot', 'model'))
+        .toThrow(/Set MOONSHOT_API_KEY environment variable/);
+    });
+
+    // --- Perplexity ---
+    it('should create a perplexity model when API key is set', () => {
+      vi.stubEnv('PERPLEXITY_API_KEY', 'test-key');
+      const model = getModel('perplexity', 'sonar-pro');
+      expect(model).toBeDefined();
+      expect((model as any).modelId).toBe('sonar-pro');
+    });
+
+    it('should throw when PERPLEXITY_API_KEY is missing', () => {
+      delete process.env.PERPLEXITY_API_KEY;
+      expect(() => getModel('perplexity', 'model'))
+        .toThrow(/Set PERPLEXITY_API_KEY environment variable/);
+    });
+
+    // --- HuggingFace ---
+    it('should create a huggingface model when API key is set', () => {
+      vi.stubEnv('HUGGINGFACE_API_KEY', 'test-key');
+      const model = getModel('huggingface', 'starcoder2-15b');
+      expect(model).toBeDefined();
+      expect((model as any).modelId).toBe('starcoder2-15b');
+    });
+
+    it('should throw when HUGGINGFACE_API_KEY is missing', () => {
+      delete process.env.HUGGINGFACE_API_KEY;
+      expect(() => getModel('huggingface', 'model'))
+        .toThrow(/Set HUGGINGFACE_API_KEY environment variable/);
+    });
+
+    // --- Baseten ---
+    it('should create a baseten model when API key is set', () => {
+      vi.stubEnv('BASETEN_API_KEY', 'test-key');
+      const model = getModel('baseten', 'custom-model');
+      expect(model).toBeDefined();
+      expect((model as any).modelId).toBe('custom-model');
+    });
+
+    it('should throw when BASETEN_API_KEY is missing', () => {
+      delete process.env.BASETEN_API_KEY;
+      expect(() => getModel('baseten', 'model'))
+        .toThrow(/Set BASETEN_API_KEY environment variable/);
+    });
+
+    // --- SiliconFlow (OpenAI-compatible) ---
+    it('should create a siliconflow model when API key is set', () => {
+      vi.stubEnv('SILICONFLOW_API_KEY', 'test-key');
+      const model = getModel('siliconflow', 'deepseek-v3');
+      expect(model).toBeDefined();
+      expect((model as any).modelId).toBe('deepseek-v3');
+    });
+
+    it('should throw when SILICONFLOW_API_KEY is missing', () => {
+      delete process.env.SILICONFLOW_API_KEY;
+      expect(() => getModel('siliconflow', 'model'))
+        .toThrow(/Set SILICONFLOW_API_KEY environment variable/);
+    });
+
+    // --- Novita (OpenAI-compatible) ---
+    it('should create a novita model when API key is set', () => {
+      vi.stubEnv('NOVITA_API_KEY', 'test-key');
+      const model = getModel('novita', 'llama-3-70b');
+      expect(model).toBeDefined();
+      expect((model as any).modelId).toBe('llama-3-70b');
+    });
+
+    it('should throw when NOVITA_API_KEY is missing', () => {
+      delete process.env.NOVITA_API_KEY;
+      expect(() => getModel('novita', 'model'))
+        .toThrow(/Set NOVITA_API_KEY environment variable/);
     });
   });
 });

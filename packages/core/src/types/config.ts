@@ -10,7 +10,11 @@ import { ModelRouterConfigSchema } from './l0.js';
 // Backend Types
 // ============================================================================
 
-export const BackendSchema = z.enum(['opencode', 'codex', 'gemini', 'claude', 'copilot', 'api']);
+export const BackendSchema = z.enum([
+  'opencode', 'codex', 'gemini', 'claude', 'copilot',
+  'aider', 'goose', 'cline', 'qwen-code', 'vibe', 'kiro', 'cursor',
+  'api',
+]);
 export type Backend = z.infer<typeof BackendSchema>;
 
 // ============================================================================

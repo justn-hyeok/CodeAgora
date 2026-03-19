@@ -24,6 +24,8 @@ export interface BackendInput {
 interface CliCommand {
   bin: string;
   args: string[];
+  /** When true, prompt is piped via stdin; when false, prompt is embedded in args. */
+  useStdin: boolean;
 }
 
 /**
@@ -83,8 +85,8 @@ export async function executeBackend(input: BackendInput): Promise<string> {
       resolve(stdout.trim());
     });
 
-    // Write prompt to stdin and close (copilot uses -p flag instead)
-    if (backend !== 'copilot') {
+    // Write prompt to stdin and close (some backends embed prompt in args instead)
+    if (cmd.useStdin) {
       child.stdin.write(prompt);
     }
     child.stdin.end();
@@ -117,27 +119,74 @@ function buildCommand(input: BackendInput): CliCommand {
       return {
         bin: 'opencode',
         args: ['run', '-m', `${validateArg(provider, 'provider')}/${validateArg(model, 'model')}`],
+        useStdin: true,
       };
     }
     case 'codex':
       return {
         bin: 'codex',
         args: ['exec', '-m', validateArg(model, 'model'), '-'],
+        useStdin: true,
       };
     case 'gemini':
       return {
         bin: 'gemini',
         args: ['-m', validateArg(model, 'model')],
+        useStdin: true,
       };
     case 'claude':
       return {
         bin: 'claude',
         args: ['--non-interactive', '--model', validateArg(model, 'model')],
+        useStdin: true,
       };
     case 'copilot':
       return {
         bin: 'copilot',
         args: ['-p', input.prompt, '-s', '--allow-all', '--model', validateArg(model, 'model')],
+        useStdin: false,
+      };
+    case 'aider':
+      return {
+        bin: 'aider',
+        args: ['--message', input.prompt, '--yes-always', '--no-auto-commits'],
+        useStdin: false,
+      };
+    case 'goose':
+      return {
+        bin: 'goose',
+        args: ['run', '-t', input.prompt, '--no-session'],
+        useStdin: false,
+      };
+    case 'cline':
+      return {
+        bin: 'cline',
+        args: ['-y', input.prompt],
+        useStdin: false,
+      };
+    case 'qwen-code':
+      return {
+        bin: 'qwen',
+        args: ['-p', input.prompt],
+        useStdin: false,
+      };
+    case 'vibe':
+      return {
+        bin: 'vibe',
+        args: ['--prompt', input.prompt],
+        useStdin: false,
+      };
+    case 'kiro':
+      return {
+        bin: 'kiro-cli',
+        args: ['chat', '--no-interactive', '--trust-all-tools', input.prompt],
+        useStdin: false,
+      };
+    case 'cursor':
+      return {
+        bin: 'agent',
+        args: ['-p', input.prompt],
+        useStdin: false,
       };
     default:
       throw new Error(`Unsupported CLI backend: ${backend}`);

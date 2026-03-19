@@ -235,6 +235,137 @@ const DECLARATIVE_TEMPLATE_DATA = {
   },
 };
 
+/**
+ * Multi-provider config — diverse providers across L1/L2/L3 layers.
+ * L1 (Reviewers): budget/fast + mid-range mix for diverse parallel reviews.
+ * L2 (Supporters): reasoning-capable models for quality debate.
+ * L3 (Head): flagship models only (anthropic/openai/google).
+ */
+const MULTI_PROVIDER_TEMPLATE_DATA = {
+  mode: 'pragmatic',
+  language: 'en',
+  // L1: diverse reviewers — budget speed + mid-range performance mix
+  reviewers: [
+    {
+      id: 'r1',
+      label: 'Fireworks Qwen3-Coder (mid-range, code-specialized)',
+      model: 'accounts/fireworks/models/qwen3-coder-480b-a35b-instruct',
+      backend: 'api',
+      provider: 'fireworks',
+      enabled: true,
+      timeout: 120,
+    },
+    {
+      id: 'r2',
+      label: 'DeepInfra DeepSeek V3.1 (mid-range, strong coder)',
+      model: 'deepseek-ai/DeepSeek-V3.1',
+      backend: 'api',
+      provider: 'deepinfra',
+      enabled: true,
+      timeout: 120,
+    },
+    {
+      id: 'r3',
+      label: 'SiliconFlow Qwen3-Coder 30B (budget, code-specialized)',
+      model: 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
+      backend: 'api',
+      provider: 'siliconflow',
+      enabled: true,
+      timeout: 120,
+    },
+    {
+      id: 'r4',
+      label: 'Novita Llama 4 Maverick (budget, different family)',
+      model: 'meta-llama/llama-4-maverick-17b-128e-instruct-fp8',
+      backend: 'api',
+      provider: 'novita',
+      enabled: true,
+      timeout: 120,
+    },
+    {
+      id: 'r5',
+      label: 'HuggingFace Qwen2.5-Coder 32B (budget, open-source)',
+      model: 'Qwen/Qwen2.5-Coder-32B-Instruct',
+      backend: 'api',
+      provider: 'huggingface',
+      enabled: true,
+      timeout: 120,
+    },
+  ],
+  // L2: reasoning models for debate
+  supporters: {
+    pool: [
+      {
+        id: 's1',
+        label: 'DeepInfra DeepSeek R1 (reasoning)',
+        model: 'deepseek-ai/DeepSeek-R1-0528',
+        backend: 'api',
+        provider: 'deepinfra',
+        enabled: true,
+        timeout: 180,
+      },
+      {
+        id: 's2',
+        label: 'Moonshot Kimi K2.5 (1T MoE, strong reasoning)',
+        model: 'kimi-k2.5',
+        backend: 'api',
+        provider: 'moonshot',
+        enabled: true,
+        timeout: 180,
+      },
+      {
+        id: 's3',
+        label: 'SiliconFlow Qwen3 Thinking (reasoning)',
+        model: 'Qwen/Qwen3-235B-A22B-Thinking-2507',
+        backend: 'api',
+        provider: 'siliconflow',
+        enabled: true,
+        timeout: 180,
+      },
+    ],
+    pickCount: 2,
+    pickStrategy: 'random',
+    devilsAdvocate: {
+      id: 'da',
+      label: 'Cohere Command A (structured analysis)',
+      model: 'command-a-03-2025',
+      backend: 'api',
+      provider: 'cohere',
+      enabled: true,
+      timeout: 180,
+    },
+    personaPool: ['.ca/personas/strict.md', '.ca/personas/pragmatic.md'],
+    personaAssignment: 'random',
+  },
+  // L2 moderator: solid reasoning for discussion orchestration
+  moderator: {
+    model: 'deepseek-ai/DeepSeek-V3.2',
+    backend: 'api',
+    provider: 'deepinfra',
+  },
+  discussion: {
+    maxRounds: 4,
+    registrationThreshold: {
+      HARSHLY_CRITICAL: 1,
+      CRITICAL: 1,
+      WARNING: 2,
+      SUGGESTION: null,
+    },
+    codeSnippetRange: 10,
+  },
+  // L3: flagship only — final verdict requires top-tier quality
+  head: {
+    backend: 'api',
+    model: 'claude-opus-4-6',
+    provider: 'anthropic',
+    enabled: true,
+  },
+  errorHandling: {
+    maxRetries: 2,
+    forfeitThreshold: 0.7,
+  },
+};
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -287,5 +418,21 @@ export function generateDeclarativeTemplate(format: 'json' | 'yaml'): string {
   return toYaml(
     '# CodeAgora Configuration (declarative)\n# L0 model intelligence layer selects reviewers automatically.',
     DECLARATIVE_TEMPLATE_DATA
+  );
+}
+
+/**
+ * Generate a multi-provider config template.
+ * L1: budget/mid-range mix across fireworks, deepinfra, siliconflow, novita, huggingface.
+ * L2: reasoning models from deepinfra, moonshot, siliconflow, cohere.
+ * L3: flagship model (anthropic claude-opus-4-6).
+ */
+export function generateMultiProviderTemplate(format: 'json' | 'yaml'): string {
+  if (format === 'json') {
+    return toJson(MULTI_PROVIDER_TEMPLATE_DATA);
+  }
+  return toYaml(
+    '# CodeAgora Configuration (multi-provider)\n# Diverse providers across layers: budget L1 reviewers, reasoning L2 supporters, flagship L3 head.',
+    MULTI_PROVIDER_TEMPLATE_DATA
   );
 }

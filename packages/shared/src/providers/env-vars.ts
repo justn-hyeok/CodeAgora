@@ -19,6 +19,15 @@ export const PROVIDER_ENV_VARS: Record<string, string> = {
   zai: 'ZAI_API_KEY',
   'github-models': 'GITHUB_TOKEN',
   'github-copilot': 'GITHUB_COPILOT_TOKEN',
+  fireworks: 'FIREWORKS_API_KEY',
+  cohere: 'COHERE_API_KEY',
+  deepinfra: 'DEEPINFRA_API_KEY',
+  moonshot: 'MOONSHOT_API_KEY',
+  perplexity: 'PERPLEXITY_API_KEY',
+  huggingface: 'HUGGINGFACE_API_KEY',
+  baseten: 'BASETEN_API_KEY',
+  siliconflow: 'SILICONFLOW_API_KEY',
+  novita: 'NOVITA_API_KEY',
 };
 
 /**

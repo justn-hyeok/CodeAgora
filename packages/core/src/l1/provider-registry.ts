@@ -9,6 +9,13 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createFireworks } from '@ai-sdk/fireworks';
+import { createCohere } from '@ai-sdk/cohere';
+import { createDeepInfra } from '@ai-sdk/deepinfra';
+import { createMoonshotAI } from '@ai-sdk/moonshotai';
+import { createPerplexity } from '@ai-sdk/perplexity';
+import { createHuggingFace } from '@ai-sdk/huggingface';
+import { createBaseten } from '@ai-sdk/baseten';
 import type { LanguageModel } from 'ai';
 
 // ============================================================================
@@ -141,6 +148,59 @@ const PROVIDER_FACTORIES = {
         apiKey,
       }) as unknown as ProviderInstance,
     apiKeyEnvVar: 'GITHUB_COPILOT_TOKEN',
+  },
+  fireworks: {
+    create: (apiKey: string) =>
+      createFireworks({ apiKey }) as unknown as ProviderInstance,
+    apiKeyEnvVar: 'FIREWORKS_API_KEY',
+  },
+  cohere: {
+    create: (apiKey: string) =>
+      createCohere({ apiKey }) as unknown as ProviderInstance,
+    apiKeyEnvVar: 'COHERE_API_KEY',
+  },
+  deepinfra: {
+    create: (apiKey: string) =>
+      createDeepInfra({ apiKey }) as unknown as ProviderInstance,
+    apiKeyEnvVar: 'DEEPINFRA_API_KEY',
+  },
+  moonshot: {
+    create: (apiKey: string) =>
+      createMoonshotAI({ apiKey }) as unknown as ProviderInstance,
+    apiKeyEnvVar: 'MOONSHOT_API_KEY',
+  },
+  perplexity: {
+    create: (apiKey: string) =>
+      createPerplexity({ apiKey }) as unknown as ProviderInstance,
+    apiKeyEnvVar: 'PERPLEXITY_API_KEY',
+  },
+  huggingface: {
+    create: (apiKey: string) =>
+      createHuggingFace({ apiKey }) as unknown as ProviderInstance,
+    apiKeyEnvVar: 'HUGGINGFACE_API_KEY',
+  },
+  baseten: {
+    create: (apiKey: string) =>
+      createBaseten({ apiKey }) as unknown as ProviderInstance,
+    apiKeyEnvVar: 'BASETEN_API_KEY',
+  },
+  siliconflow: {
+    create: (apiKey: string) =>
+      createOpenAICompatible({
+        name: 'siliconflow',
+        baseURL: 'https://api.siliconflow.cn/v1',
+        apiKey,
+      }) as unknown as ProviderInstance,
+    apiKeyEnvVar: 'SILICONFLOW_API_KEY',
+  },
+  novita: {
+    create: (apiKey: string) =>
+      createOpenAICompatible({
+        name: 'novita',
+        baseURL: 'https://api.novita.ai/v3/openai',
+        apiKey,
+      }) as unknown as ProviderInstance,
+    apiKeyEnvVar: 'NOVITA_API_KEY',
   },
 } as const;
 
