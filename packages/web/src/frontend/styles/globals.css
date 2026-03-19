@@ -143,6 +143,17 @@ a:hover {
    ============================================================================ */
 
 .severity-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.4;
+}
+
+/* ============================================================================
    Page Header
    ============================================================================ */
 
@@ -1013,6 +1024,13 @@ a:hover {
 }
 
 .review-detail__section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--color-text);
+}
+
+/* ============================================================================
    Pipeline Page
    ============================================================================ */
 
@@ -1280,6 +1298,8 @@ a:hover {
   font-size: 12px;
   color: var(--color-text-secondary);
   font-weight: 500;
+}
+
 .event-log-empty {
   color: var(--color-text-secondary);
   font-size: 13px;
@@ -1525,6 +1545,12 @@ a:hover {
    ============================================================================ */
 
 .model-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ============================================================================
    Discussion/Debate Viewer — Session Selector
    ============================================================================ */
 
@@ -1694,6 +1720,12 @@ a:hover {
 /* Selection Frequency */
 
 .frequency-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ============================================================================
    Cost Summary Cards
    ============================================================================ */
 
@@ -1827,6 +1859,11 @@ a:hover {
 }
 
 .frequency-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .reviewer-costs__row {
   display: flex;
   align-items: center;
@@ -1838,6 +1875,8 @@ a:hover {
   font-size: 13px;
   color: var(--color-text);
   font-family: var(--font-mono);
+}
+
 .disc-layout__list {
   width: 100%;
 }
@@ -1977,6 +2016,8 @@ a:hover {
 
 .provider-card {
   padding: 14px;
+}
+
 .disc-list__line {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -2230,6 +2271,8 @@ a:hover {
 .provider-card__stat-value {
   color: var(--color-text);
   font-family: var(--font-mono);
+}
+
 .reviewer-costs__info {
   min-width: 140px;
   display: flex;
@@ -2285,6 +2328,13 @@ a:hover {
 }
 
 .cost-breakdown__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .debate-timeline__verdict-header {
   display: flex;
   align-items: center;
@@ -2357,6 +2407,12 @@ a:hover {
 }
 
 .cost-breakdown__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
 .stance-viz__empty {
   color: var(--color-text-secondary);
   font-size: 13px;
