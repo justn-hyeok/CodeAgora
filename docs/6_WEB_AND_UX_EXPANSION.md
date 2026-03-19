@@ -1718,22 +1718,11 @@ Sprint 6:  TDD MANDATORY
 
 ---
 
-### Sprint 7+: Web Dashboard
+### ~~Sprint 7: Web Dashboard~~ ✅ DONE
 
-```
-5.1 Web server infrastructure                   → @codeagora/web (new package)
-5.2 Review results dashboard                    → @codeagora/web
-5.3 Real-time pipeline progress                 → @codeagora/web (WebSocket ← @codeagora/core ProgressEmitter)
-5.5 Session history browser                     → @codeagora/web
-5.6 Cost analytics dashboard                    → @codeagora/web
-5.7 Discussion/debate viewer                    → @codeagora/web
-5.4 Model intelligence dashboard                → @codeagora/web
-5.8 Config management UI                        → @codeagora/web
-```
+> **Completed:** PRs #148–#155 (8 PRs). `@codeagora/web` package with Hono.js REST API + WebSocket + React SPA. 8 features, 207 tests.
 
-**Estimated effort:** 1-2 weeks
-**Stack:** Hono.js (REST API + WebSocket) + React SPA (Vite)
-**Impact:** Full web-based review analytics platform. Adding `@codeagora/web` is a one-line change in `pnpm-workspace.yaml` thanks to Sprint 0.
+~~5.1 Web server infrastructure, 5.2 Review results dashboard, 5.3 Real-time pipeline progress, 5.4 Model intelligence dashboard, 5.5 Session history browser, 5.6 Cost analytics dashboard, 5.7 Discussion/debate viewer, 5.8 Config management UI.~~
 
 ---
 
