@@ -7,8 +7,8 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/codeagora"><img src="https://img.shields.io/npm/v/codeagora?color=%2305A6B9" alt="Version"></a>
-  <img src="https://img.shields.io/badge/tests-1880%20passing-%23191A51" alt="Tests">
-  <img src="https://img.shields.io/badge/version-2.0.0--rc.1-%2305A6B9" alt="v2.0.0-rc.1">
+  <img src="https://img.shields.io/badge/tests-1817%20passing-%23191A51" alt="Tests">
+  <img src="https://img.shields.io/badge/version-2.0.0--rc.2-%2305A6B9" alt="v2.0.0-rc.2">
   <img src="https://img.shields.io/badge/node-%3E%3D20-%2305A6B9" alt="Node">
   <img src="https://img.shields.io/badge/license-MIT-%23191A51" alt="License">
 </p>
@@ -90,23 +90,53 @@ The build produces `dist/cli/index.js`. The binary is available as both `agora` 
 
 Set at least one provider API key in your environment:
 
-| Provider | Environment Variable |
-|----------|----------------------|
-| Groq | `GROQ_API_KEY` |
-| OpenAI | `OPENAI_API_KEY` |
-| Anthropic | `ANTHROPIC_API_KEY` |
-| Google | `GOOGLE_API_KEY` |
-| OpenRouter | `OPENROUTER_API_KEY` |
-| DeepSeek | `DEEPSEEK_API_KEY` |
-| Mistral | `MISTRAL_API_KEY` |
-| Qwen | `QWEN_API_KEY` |
-| xAI | `XAI_API_KEY` |
-| Together | `TOGETHER_API_KEY` |
-| Cerebras | `CEREBRAS_API_KEY` |
-| NVIDIA NIM | `NVIDIA_API_KEY` |
-| ZAI | `ZAI_API_KEY` |
-| GitHub Models | `GITHUB_TOKEN` |
-| GitHub Copilot | `GITHUB_COPILOT_TOKEN` | `[experimental]` |
+| Provider | Environment Variable | Notes |
+|----------|----------------------|-------|
+| Groq | `GROQ_API_KEY` | Free tier available |
+| OpenAI | `OPENAI_API_KEY` | |
+| Anthropic | `ANTHROPIC_API_KEY` | |
+| Google | `GOOGLE_API_KEY` | |
+| OpenRouter | `OPENROUTER_API_KEY` | |
+| DeepSeek | `DEEPSEEK_API_KEY` | |
+| Mistral | `MISTRAL_API_KEY` | |
+| Qwen | `QWEN_API_KEY` | |
+| xAI | `XAI_API_KEY` | |
+| Together | `TOGETHER_API_KEY` | |
+| Cerebras | `CEREBRAS_API_KEY` | Free tier available |
+| NVIDIA NIM | `NVIDIA_API_KEY` | |
+| ZAI | `ZAI_API_KEY` | |
+| GitHub Models | `GITHUB_TOKEN` | Free tier available |
+| GitHub Copilot | `GITHUB_COPILOT_TOKEN` | Experimental |
+| Fireworks AI | `FIREWORKS_API_KEY` | |
+| Cohere | `COHERE_API_KEY` | |
+| DeepInfra | `DEEPINFRA_API_KEY` | |
+| Moonshot (Kimi) | `MOONSHOT_API_KEY` | |
+| Perplexity | `PERPLEXITY_API_KEY` | |
+| Hugging Face | `HUGGINGFACE_API_KEY` | |
+| Baseten | `BASETEN_API_KEY` | |
+| SiliconFlow | `SILICONFLOW_API_KEY` | |
+| Novita AI | `NOVITA_API_KEY` | |
+
+### CLI Backends
+
+CodeAgora can also use locally installed CLI tools as reviewers:
+
+| Backend | Binary | Install |
+|---------|--------|---------|
+| Claude | `claude` | [claude.ai](https://claude.ai/download) |
+| Codex | `codex` | `npm i -g @openai/codex` |
+| Gemini | `gemini` | `npm i -g @anthropic-ai/gemini-cli` |
+| OpenCode | `opencode` | `go install github.com/sst/opencode@latest` |
+| Copilot | `copilot` | `npm i -g @anthropic-ai/copilot` |
+| Aider | `aider` | `pip install aider-chat` |
+| Goose | `goose` | `brew install goose` |
+| Cline | `cline` | `npm i -g cline` |
+| Qwen Code | `qwen` | `npm i -g @qwen-code/qwen-code` |
+| Kiro | `kiro-cli` | `brew install kiro` |
+| Cursor | `agent` | [cursor.com](https://cursor.com) |
+| Vibe | `vibe` | [mistral.ai](https://docs.mistral.ai/mistral-vibe) |
+
+`agora init` auto-detects installed CLI tools and available API keys.
 
 API keys are securely stored in `~/.config/codeagora/credentials` (not in your project directory). Set them via the TUI or directly:
 

@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.0.0-rc.2 (2026-03-20)
+
+### New Providers & Backends
+- **9 new API providers** — Fireworks AI, Cohere, DeepInfra, Moonshot (Kimi), Perplexity, Hugging Face, Baseten, SiliconFlow, Novita AI. Total: 24 API providers.
+- **7 new CLI backends** — Aider, Goose, Cline, Qwen Code, Mistral Vibe, Kiro, Cursor. Total: 12 CLI backends.
+- **Multi-provider config template** — L1 budget/mid-range mix, L2 reasoning models, L3 flagship (anthropic).
+
+### New Features
+- **Context-aware review (#71)** — reviewer prompts now include surrounding source code lines for better understanding. Token budget capped at 30% with progressive reduction. `--context-lines <n>` to configure (default 20).
+- **Verbose output (#73)** — `--verbose` / `-v` flag shows full issue details: problem description, evidence list, and fix suggestions per issue.
+- **Session keyword search (#78)** — `agora sessions list --search "keyword"` filters sessions by content (case-insensitive).
+- **Fallback chain (#89)** — reviewer `fallback` field now accepts an array of fallback configs, tried sequentially until one succeeds. Backward compatible with single-object syntax.
+- **HTML & JUnit XML output (#92)** — `--output html` for shareable reports, `--output junit` for CI integration (Jenkins, GitLab).
+- **Review result caching (#109)** — SHA-256 hash of diff + reviewer config. Identical reviews return cached results instantly. `--no-cache` to bypass.
+- **models.dev integration (#173)** — external model catalog with 3-tier loading (cache → fetch → bundled snapshot). 104 providers, 3875 models with pricing, context windows, and capability metadata.
+- **Environment auto-detection (#173)** — `agora init` detects installed CLI tools and API keys, generates dynamic presets (Free/Quick/Thorough/CLI), and supports multi-provider selection.
+- **Enhanced providers/doctor (#173)** — `agora providers` shows model counts and free tier availability. `agora doctor` checks CLI backend availability.
+- **Post-install message** — getting-started guide displayed after `npm i -g codeagora`.
+
+### Internal
+- 239 new tests (1578 → 1817)
+- `useStdin` flag on CliCommand for explicit stdin vs args prompt delivery
+- Provider SDK imports verified against actual package exports
+- CLI flags verified against official documentation
+
 ## 2.0.0-rc.1 (2026-03-19)
 
 ### Breaking Changes
