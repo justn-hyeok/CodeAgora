@@ -74,7 +74,7 @@ program
   .option('--output <format>', 'Output format: text, json, md, github, annotated', 'text')
   .option('--provider <name>', 'Override provider for auto reviewers')
   .option('--model <name>', 'Override model for auto reviewers')
-  .option('--verbose', 'Show detailed telemetry output', false)
+  .option('-v, --verbose', 'Show detailed issue info and fix suggestions', false)
   .option('--reviewers <value>', 'Number of reviewers or comma-separated names')
   .option('--timeout <seconds>', 'Pipeline timeout in seconds', parseInt)
   .option('--reviewer-timeout <seconds>', 'Per-reviewer timeout in seconds', parseInt)
@@ -290,17 +290,18 @@ program
       const result = await runPipeline(pipelineOptions, progress);
       spinner?.stop();
 
-      // For annotated format, read the original diff file and pass it through
-      let annotatedOptions: { diffContent?: string } | undefined;
+      // Build format options: verbose flag + annotated-specific options
+      const formatOpts: Parameters<typeof formatOutput>[2] = {
+        verbose: options.verbose,
+      };
       if (outputFormat === 'annotated') {
         try {
-          const diffContent = await fs.readFile(resolvedPath, 'utf-8');
-          annotatedOptions = { diffContent };
+          formatOpts.diffContent = await fs.readFile(resolvedPath, 'utf-8');
         } catch {
           // If we can't read the diff, formatAnnotated will show "(no diff content)"
         }
       }
-      console.log(formatOutput(result, outputFormat, annotatedOptions));
+      console.log(formatOutput(result, outputFormat, formatOpts));
 
       // Emit final result as NDJSON for --json-stream consumers
       if (options.jsonStream) {
@@ -852,6 +853,7 @@ Examples:
   ${displayName} review --pr 123                   Review a GitHub PR
   ${displayName} review --staged                   Review staged changes
   ${displayName} review --quick                    Quick review (L1 only)
+  ${displayName} review --verbose                   Show full issue details
   ${displayName} review --output json              JSON output for CI
   ${displayName} review --json-stream              Stream NDJSON for CI
 `);

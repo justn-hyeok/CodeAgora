@@ -16,10 +16,20 @@ export type OutputFormat = 'text' | 'json' | 'md' | 'github' | 'annotated';
 // Text format (default)
 // ============================================================================
 
+/** Options for formatting output. */
+export interface FormatOptions {
+  /** Show full issue details (problem, evidence, suggestion). Default: false. */
+  verbose?: boolean;
+  /** Raw diff content (for annotated format). */
+  diffContent?: string;
+  /** Evidence documents override (for annotated format). */
+  evidenceDocs?: EvidenceDocument[];
+}
+
 /**
  * Format a PipelineResult as plain text output.
  */
-export function formatText(result: PipelineResult): string {
+export function formatText(result: PipelineResult, options?: FormatOptions): string {
   const lines: string[] = [];
 
   if (result.status === 'error') {
@@ -55,8 +65,30 @@ export function formatText(result: PipelineResult): string {
     lines.push('');
   }
 
-  // Top issues (up to 5) — with confidence badge if available
-  if (s.topIssues.length > 0) {
+  // Verbose mode: show all evidence documents with full detail
+  if (options?.verbose && result.evidenceDocs && result.evidenceDocs.length > 0) {
+    lines.push(bold('Detailed Issues:'));
+    for (const doc of result.evidenceDocs) {
+      const fn = severityColor[doc.severity as keyof typeof severityColor] ?? ((x: string) => x);
+      const confidenceBadge = doc.confidence != null ? ` (${doc.confidence}%)` : '';
+      const lineLabel = doc.lineRange[0] === doc.lineRange[1]
+        ? `${doc.lineRange[0]}`
+        : `${doc.lineRange[0]}-${doc.lineRange[1]}`;
+      const header = fn(`[${doc.severity}]${confidenceBadge}`);
+      lines.push(`\u250C\u2500 ${header} ${doc.issueTitle} \u2014 ${dim(`${doc.filePath}:${lineLabel}`)}`);
+      lines.push(`\u2502  ${bold('Problem:')} ${doc.problem}`);
+      if (doc.evidence.length > 0) {
+        lines.push(`\u2502  ${bold('Evidence:')}`);
+        for (let i = 0; i < doc.evidence.length; i++) {
+          lines.push(`\u2502    ${i + 1}. ${doc.evidence[i]}`);
+        }
+      }
+      lines.push(`\u2502  ${bold('Suggestion:')} ${doc.suggestion}`);
+      lines.push('\u2514\u2500');
+    }
+    lines.push('');
+  } else if (s.topIssues.length > 0) {
+    // Default: Top issues (up to 5) — with confidence badge if available
     lines.push(bold('Top Issues:'));
     for (const issue of s.topIssues.slice(0, 5)) {
       const fn = severityColor[issue.severity as keyof typeof severityColor] ?? ((x: string) => x);
@@ -122,7 +154,7 @@ export function formatJson(result: PipelineResult): string {
 /**
  * Format a PipelineResult as Markdown suitable for PR comments.
  */
-export function formatMarkdown(result: PipelineResult): string {
+export function formatMarkdown(result: PipelineResult, options?: FormatOptions): string {
   const lines: string[] = [];
 
   lines.push('## CodeAgora Review');
@@ -154,8 +186,31 @@ export function formatMarkdown(result: PipelineResult): string {
     lines.push(tableRows);
     lines.push('');
 
-    // Top issues
-    if (s.topIssues.length > 0) {
+    // Verbose mode: show all evidence documents with full detail
+    if (options?.verbose && result.evidenceDocs && result.evidenceDocs.length > 0) {
+      lines.push('### Detailed Issues');
+      lines.push('');
+      for (const doc of result.evidenceDocs) {
+        const confidenceBadge = doc.confidence != null ? ` (${doc.confidence}%)` : '';
+        const lineLabel = doc.lineRange[0] === doc.lineRange[1]
+          ? `${doc.lineRange[0]}`
+          : `${doc.lineRange[0]}-${doc.lineRange[1]}`;
+        lines.push(`#### **[${doc.severity}]**${confidenceBadge} ${doc.issueTitle} — \`${doc.filePath}:${lineLabel}\``);
+        lines.push('');
+        lines.push(`**Problem:** ${doc.problem}`);
+        lines.push('');
+        if (doc.evidence.length > 0) {
+          lines.push('**Evidence:**');
+          for (const ev of doc.evidence) {
+            lines.push(`- ${ev}`);
+          }
+          lines.push('');
+        }
+        lines.push(`**Suggestion:** ${doc.suggestion}`);
+        lines.push('');
+      }
+    } else if (s.topIssues.length > 0) {
+      // Default: top issues summary
       lines.push('**Top Issues:**');
       for (const issue of s.topIssues.slice(0, 5)) {
         lines.push(
@@ -229,15 +284,15 @@ export function formatGithub(result: PipelineResult): string {
 export function formatOutput(
   result: PipelineResult,
   format: OutputFormat,
-  options?: { diffContent?: string; evidenceDocs?: EvidenceDocument[] }
+  options?: FormatOptions
 ): string {
   switch (format) {
     case 'text':
-      return formatText(result);
+      return formatText(result, options);
     case 'json':
       return formatJson(result);
     case 'md':
-      return formatMarkdown(result);
+      return formatMarkdown(result, options);
     case 'github':
       return formatGithub(result);
     case 'annotated': {
