@@ -61,7 +61,7 @@ const program = new Command();
 program
   .name(displayName)
   .description('Multi-LLM collaborative code review CLI')
-  .version('3.0.0')
+  .version(process.env.CODEAGORA_VERSION ?? 'dev')
   .option('--lang <locale>', 'language (en/ko)')
   .hook('preAction', (thisCommand) => {
     const opts = thisCommand.opts() as { lang?: string };

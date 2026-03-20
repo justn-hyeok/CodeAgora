@@ -1,9 +1,12 @@
 import { defineConfig } from 'tsup';
 import path from 'path';
+import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import type { Plugin } from 'esbuild';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootPkg = JSON.parse(readFileSync(path.resolve(__dirname, '../../package.json'), 'utf-8'));
+const PKG_VERSION = rootPkg.version;
 
 /**
  * esbuild plugin that resolves @codeagora/* subpath imports
@@ -62,5 +65,8 @@ export default defineConfig({
     /^@codeagora\/tui/,
     /^@codeagora\/web/,
   ],
+  define: {
+    'process.env.CODEAGORA_VERSION': JSON.stringify(PKG_VERSION),
+  },
   esbuildPlugins: [workspaceResolver()],
 });
