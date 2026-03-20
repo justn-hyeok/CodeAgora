@@ -1000,6 +1000,32 @@ Examples:
 // In ESM the canonical check is comparing import.meta.url to the process entry module.
 // A simpler cross-env guard: skip parse when NODE_ENV is 'test' and argv hasn't been
 // explicitly set beyond the two node/script entries.
+// Easter egg
+program
+  .command('justn')
+  .description('???')
+  .action(async () => {
+    const msg = 'I MADE IT GRAHHHHHHHHH ';
+    const colors = ['\x1b[31m', '\x1b[33m', '\x1b[32m', '\x1b[36m', '\x1b[35m'];
+    const bold = '\x1b[1m';
+    const reset = '\x1b[0m';
+    const end = Date.now() + 5000;
+    let i = 0;
+    while (Date.now() < end) {
+      process.stdout.write(`${bold}${colors[i % colors.length]}${msg}${reset}`);
+      i++;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    console.log('\n');
+    console.log(`${bold}\x1b[33m  ██╗███╗   ███╗ █████╗ ██████╗ ███████╗    ██████╗ ██╗   ██╗     ██╗██╗   ██╗███████╗████████╗███╗   ██╗${reset}`);
+    console.log(`${bold}\x1b[33m  ██║████╗ ████║██╔══██╗██╔══██╗██╔════╝    ██╔══██╗╚██╗ ██╔╝     ██║██║   ██║██╔════╝╚══██╔══╝████╗  ██║${reset}`);
+    console.log(`${bold}\x1b[33m  ██║██╔████╔██║███████║██║  ██║█████╗      ██████╔╝ ╚████╔╝      ██║██║   ██║███████╗   ██║   ██╔██╗ ██║${reset}`);
+    console.log(`${bold}\x1b[33m  ██║██║╚██╔╝██║██╔══██║██║  ██║██╔══╝      ██╔══██╗  ╚██╔╝  ██   ██║██║   ██║╚════██║   ██║   ██║╚██╗██║${reset}`);
+    console.log(`${bold}\x1b[33m  ██║██║ ╚═╝ ██║██║  ██║██████╔╝███████╗    ██████╔╝   ██║   ╚█████╔╝╚██████╔╝███████║   ██║   ██║ ╚████║${reset}`);
+    console.log(`${bold}\x1b[33m  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝    ╚═════╝    ╚═╝    ╚════╝  ╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═══╝${reset}`);
+    console.log('');
+  });
+
 if (process.env.NODE_ENV !== 'test') {
   program.parse();
 }
