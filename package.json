@@ -25,6 +25,7 @@
     "packages/*/dist/**/*.js",
     "packages/*/dist/**/*.d.ts",
     "packages/shared/src/data/**",
+    "scripts/postinstall.js",
     "README.md",
     "LICENSE"
   ],
@@ -33,6 +34,7 @@
     "agora": "./packages/cli/dist/index.js"
   },
   "scripts": {
+    "postinstall": "node scripts/postinstall.js",
     "build": "pnpm -r build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
