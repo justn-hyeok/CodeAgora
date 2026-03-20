@@ -71,7 +71,7 @@ program
   .description('Run code review pipeline on a diff file')
   .argument('[diff-path]', 'Path to the diff file (use - for stdin)')
   .option('--dry-run', 'Validate config without running review')
-  .option('--output <format>', 'Output format: text, json, md, github, annotated', 'text')
+  .option('--output <format>', 'Output format: text, json, md, github, annotated, html, junit', 'text')
   .option('--provider <name>', 'Override provider for auto reviewers')
   .option('--model <name>', 'Override model for auto reviewers')
   .option('-v, --verbose', 'Show detailed issue info and fix suggestions', false)
@@ -113,7 +113,7 @@ program
         options.verbose = false; // --quiet takes precedence
       }
 
-      const outputFormat = (['text', 'json', 'md', 'github', 'annotated'].includes(options.output)
+      const outputFormat = (['text', 'json', 'md', 'github', 'annotated', 'html', 'junit'].includes(options.output)
         ? options.output : 'text') as OutputFormat;
 
       // Handle --staged: run git diff --staged and use as input
@@ -864,6 +864,8 @@ Examples:
   ${displayName} review --output json              JSON output for CI
   ${displayName} review --json-stream              Stream NDJSON for CI
   ${displayName} review --no-cache                 Skip cache, run fresh review
+  ${displayName} review --output html              HTML report for sharing
+  ${displayName} review --output junit             JUnit XML for CI integration
 `);
       break;
     case 'init':
