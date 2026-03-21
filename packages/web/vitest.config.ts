@@ -7,6 +7,7 @@ export default defineConfig({
     environment: 'node',
     environmentMatchGlobs: [
       ['tests/frontend/render/**', 'jsdom'],
+      ['tests/frontend/hooks-*.test.ts', 'jsdom'],
     ],
     setupFiles: ['tests/frontend/render/setup.ts'],
   },
