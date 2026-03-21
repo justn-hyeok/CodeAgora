@@ -18,7 +18,6 @@
   "dependencies": {
     "@codeagora/core": "workspace:*",
     "@codeagora/github": "workspace:*",
-    "@codeagora/notifications": "workspace:*",
     "@codeagora/shared": "workspace:*",
     "commander": "^14.0.3",
     "ora": "^9.3.0",

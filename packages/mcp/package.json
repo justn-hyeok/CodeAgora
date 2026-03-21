@@ -1,14 +1,27 @@
 {
   "name": "@codeagora/mcp",
   "version": "2.0.0",
+  "description": "CodeAgora MCP server — Claude Code integration for AI-powered code review",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bssm-oss/CodeAgora.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/bssm-oss/CodeAgora#readme",
+  "keywords": ["codeagora", "mcp", "model-context-protocol", "claude", "code-review"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
     "codeagora-mcp": "./dist/index.js"
   },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
+  ],
   "scripts": {
-    "build": "echo skip",
+    "build": "tsup",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

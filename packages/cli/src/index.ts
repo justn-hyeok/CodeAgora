@@ -19,7 +19,7 @@ import {
 import { formatOutput, type OutputFormat } from './formatters/review-output.js';
 import { parseReviewerOption, readStdin } from './options/review-options.js';
 import { formatError, classifyError } from './utils/errors.js';
-import { sendNotifications, type NotificationPayload } from '@codeagora/notifications/webhook.js';
+// @codeagora/notifications is optional — dynamically imported when needed
 import ora from 'ora';
 import { ProgressEmitter } from '@codeagora/core/pipeline/progress.js';
 import { setLocale, detectLocale, t } from '@codeagora/shared/i18n/index.js';
@@ -363,23 +363,28 @@ program
         const config = await loadConfig().catch(() => null);
         const shouldNotify = options.notify || config?.notifications?.autoNotify === true;
         if (shouldNotify && config?.notifications) {
-          const s = result.summary;
-          const payload: NotificationPayload = {
-            decision: s.decision,
-            reasoning: s.reasoning,
-            severityCounts: s.severityCounts,
-            topIssues: s.topIssues.map((i) => ({
-              severity: i.severity,
-              filePath: i.filePath,
-              title: i.title,
-            })),
-            sessionId: result.sessionId,
-            date: result.date,
-            totalDiscussions: s.totalDiscussions,
-            resolved: s.resolved,
-            escalated: s.escalated,
-          };
-          await sendNotifications(config.notifications, payload);
+          try {
+            const { sendNotifications } = await import('@codeagora/notifications/webhook.js');
+            const s = result.summary;
+            await sendNotifications(config.notifications, {
+              decision: s.decision,
+              reasoning: s.reasoning,
+              severityCounts: s.severityCounts,
+              topIssues: s.topIssues.map((i) => ({
+                severity: i.severity,
+                filePath: i.filePath,
+                title: i.title,
+              })),
+              sessionId: result.sessionId,
+              date: result.date,
+              totalDiscussions: s.totalDiscussions,
+              resolved: s.resolved,
+              escalated: s.escalated,
+            });
+          } catch {
+            console.error('@codeagora/notifications is not installed.');
+            console.error('Install: npm i -g @codeagora/notifications');
+          }
         }
       }
 
@@ -636,7 +641,16 @@ program
       const severityCounts = (verdictRaw['severityCounts'] as Record<string, number>) ?? {};
       const topIssues = (verdictRaw['topIssues'] as Array<{ severity: string; filePath: string; title: string }>) ?? [];
 
-      const payload: NotificationPayload = {
+      let sendNotifications: typeof import('@codeagora/notifications/webhook.js')['sendNotifications'];
+      try {
+        ({ sendNotifications } = await import('@codeagora/notifications/webhook.js'));
+      } catch {
+        console.error('@codeagora/notifications is not installed.');
+        console.error('Install: npm i -g @codeagora/notifications');
+        process.exit(1);
+      }
+
+      await sendNotifications(config.notifications, {
         decision,
         reasoning,
         severityCounts,
@@ -646,9 +660,7 @@ program
         totalDiscussions: Number(verdictRaw['totalDiscussions'] ?? 0),
         resolved: Number(verdictRaw['resolved'] ?? 0),
         escalated: Number(verdictRaw['escalated'] ?? 0),
-      };
-
-      await sendNotifications(config.notifications, payload);
+      });
       console.log(`Notification sent for session ${sessionId}`);
     } catch (error) {
       console.error('Notify failed:', error instanceof Error ? error.message : error);
@@ -660,8 +672,14 @@ program
   .command('tui')
   .description('Launch interactive TUI mode')
   .action(async () => {
-    const { startTui } = await import('@codeagora/tui/index.js');
-    startTui();
+    try {
+      const { startTui } = await import('@codeagora/tui/index.js');
+      startTui();
+    } catch {
+      console.error('@codeagora/tui is not installed.');
+      console.error('Install: npm i -g @codeagora/tui');
+      process.exit(1);
+    }
   });
 
 registerLearnCommand(program);

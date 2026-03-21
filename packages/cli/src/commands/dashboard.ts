@@ -9,9 +9,16 @@ export async function startDashboard(options: { port?: number; open?: boolean })
   const port = options.port ?? 6274;
   const url = `http://127.0.0.1:${port}`;
 
-  console.log(t('cli.dashboard.starting', { url }));
+  let startServer: (opts: { port: number }) => { close: () => void };
+  try {
+    ({ startServer } = await import('@codeagora/web'));
+  } catch {
+    console.error('@codeagora/web is not installed.');
+    console.error('Install: npm i -g @codeagora/web');
+    process.exit(1);
+  }
 
-  const { startServer } = await import('@codeagora/web');
+  console.log(t('cli.dashboard.starting', { url }));
   const server = startServer({ port });
 
   if (options.open) {

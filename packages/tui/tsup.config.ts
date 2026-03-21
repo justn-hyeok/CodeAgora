@@ -25,21 +25,22 @@ function workspaceResolver(): Plugin {
 }
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/index.tsx'],
   format: ['esm'],
-  dts: true,
+  dts: false,
   clean: true,
   bundle: true,
-  noExternal: [/^@codeagora\/(core|shared|github)/],
+  noExternal: [/^@codeagora\/(core|shared)/],
   external: [
     /^@ai-sdk\//,
     /^@openrouter\//,
-    /^@hono\//,
     'ai',
     'zod',
-    'hono',
     'yaml',
     'picocolors',
+    'ink',
+    'ink-select-input',
+    'react',
     'p-limit',
   ],
   esbuildPlugins: [workspaceResolver()],

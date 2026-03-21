@@ -1,11 +1,24 @@
 {
   "name": "@codeagora/tui",
   "version": "2.0.0",
+  "description": "CodeAgora interactive terminal UI — ink-based review interface",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bssm-oss/CodeAgora.git",
+    "directory": "packages/tui"
+  },
+  "homepage": "https://github.com/bssm-oss/CodeAgora#readme",
+  "keywords": ["codeagora", "tui", "terminal", "ink", "code-review"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
+  ],
   "scripts": {
-    "build": "echo skip",
+    "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint src/"

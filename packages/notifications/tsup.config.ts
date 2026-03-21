@@ -25,22 +25,16 @@ function workspaceResolver(): Plugin {
 }
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/webhook.ts'],
   format: ['esm'],
   dts: true,
   clean: true,
   bundle: true,
-  noExternal: [/^@codeagora\/(core|shared|github)/],
+  noExternal: [/^@codeagora\/(core|shared)/],
   external: [
-    /^@ai-sdk\//,
-    /^@openrouter\//,
-    /^@hono\//,
-    'ai',
     'zod',
-    'hono',
     'yaml',
     'picocolors',
-    'p-limit',
   ],
   esbuildPlugins: [workspaceResolver()],
 });
